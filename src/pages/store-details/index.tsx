@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { StoreItem } from "../../data/stores";
 import ThemeToggle from "../../components/theme-toggle";
+import { StoreItem } from "../../data/stores";
 import { AppTheme, ThemeMode } from "../../global/themes";
 import { createStyles } from "./styles";
 
@@ -49,7 +49,7 @@ export default function StoreDetails({
             <Text style={style.topActionText}>Voltar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={style.topAction} onPress={onRequestLogin}>
-            <Text style={style.topActionText}>Entrar</Text>
+            <Text style={style.topActionText}>Conta</Text>
           </TouchableOpacity>
         </View>
 
@@ -82,13 +82,13 @@ export default function StoreDetails({
               <Text style={style.beerName}>{beer.name}</Text>
               <Text style={style.beerPrice}>{beer.price}</Text>
             </View>
-            <Text style={style.beerMeta}>{beer.style} - {beer.abv}</Text>
+            <Text style={style.beerMeta}>{beer.style} - {beer.abv} - IBU {beer.ibu}</Text>
             <Text style={style.beerRating}>Avaliacao {beer.rating.toFixed(1)} / 5.0</Text>
           </TouchableOpacity>
         ))}
 
         <TouchableOpacity style={style.loginToBuyButton} onPress={onRequestLogin}>
-          <Text style={style.loginToBuyText}>Entrar para comprar</Text>
+          <Text style={style.loginToBuyText}>Abrir conta</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

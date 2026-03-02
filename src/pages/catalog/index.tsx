@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { getAllBeers, stores } from "../../data/stores";
 import ThemeToggle from "../../components/theme-toggle";
+import { StoreItem, getAllBeers } from "../../data/stores";
 import { AppTheme, ThemeMode } from "../../global/themes";
 import { createStyles } from "./styles";
 
@@ -9,6 +9,7 @@ export type CatalogMode = "stores" | "beers";
 
 type CatalogProps = {
   mode: CatalogMode;
+  storesData: StoreItem[];
   onBack?: () => void;
   onOpenStore?: (storeId: string) => void;
   onOpenBeer?: (beerId: string) => void;
@@ -20,6 +21,7 @@ type CatalogProps = {
 
 export default function Catalog({
   mode,
+  storesData,
   onBack,
   onOpenStore,
   onOpenBeer,
@@ -28,7 +30,7 @@ export default function Catalog({
   themeMode,
   onToggleTheme,
 }: CatalogProps) {
-  const allBeers = getAllBeers();
+  const allBeers = useMemo(() => getAllBeers(storesData), [storesData]);
   const isStoresMode = mode === "stores";
   const style = useMemo(() => createStyles(theme), [theme]);
 
@@ -41,7 +43,7 @@ export default function Catalog({
             <Text style={style.topActionText}>Voltar</Text>
           </TouchableOpacity>
           <TouchableOpacity style={style.topAction} onPress={onRequestLogin}>
-            <Text style={style.topActionText}>Entrar</Text>
+            <Text style={style.topActionText}>Conta</Text>
           </TouchableOpacity>
         </View>
 
@@ -49,11 +51,11 @@ export default function Catalog({
         <Text style={style.pageSubtitle}>
           {isStoresMode
             ? "Explore todas as cervejarias disponiveis e abra o perfil de cada uma."
-            : "Veja todas as cervejas cadastradas, com avaliacao e cervejaria."}
+            : "Veja todas as cervejas cadastradas, com avaliacao, preco e cervejaria."}
         </Text>
 
         {isStoresMode
-          ? stores.map((store) => (
+          ? storesData.map((store) => (
               <TouchableOpacity
                 key={store.id}
                 style={style.card}

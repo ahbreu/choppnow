@@ -1,7 +1,9 @@
 import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { getAllBeers, stores } from "../../data/stores";
+import AppBottomNav from "../../components/app-bottom-nav";
 import ThemeToggle from "../../components/theme-toggle";
+import { BeerWithStore, StoreItem, getAllBeers } from "../../data/stores";
+import { UserProfile } from "../../data/users";
 import { AppTheme, ThemeMode } from "../../global/themes";
 import { createStyles } from "./styles";
 
@@ -12,11 +14,17 @@ type Category = {
 };
 
 type LandingProps = {
-  onRequestLogin?: () => void;
+  currentUser: UserProfile | null;
+  storesData: StoreItem[];
+  onHeaderAction?: () => void;
+  headerActionLabel: string;
   onOpenStore?: (storeId: string) => void;
   onOpenBeer?: (beerId: string) => void;
   onOpenStoreList?: () => void;
   onOpenBeerList?: () => void;
+  onOpenSearch?: () => void;
+  onOpenOrders?: () => void;
+  onOpenProfile?: () => void;
   theme: AppTheme;
   themeMode: ThemeMode;
   onToggleTheme?: () => void;
@@ -27,26 +35,24 @@ const categories: Category[] = [
   { id: "cervejas", label: "Cervejas", short: "CJ" },
 ];
 
-const beerCards = getAllBeers().slice(0, 4);
-
-const bottomTabs = [
-  { id: "home", label: "Inicio", short: "IN" },
-  { id: "search", label: "Busca", short: "BU" },
-  { id: "orders", label: "Pedidos", short: "PD" },
-  { id: "profile", label: "Perfil", short: "PF" },
-];
-
 export default function Landing({
-  onRequestLogin,
+  currentUser,
+  storesData,
+  onHeaderAction,
+  headerActionLabel,
   onOpenStore,
   onOpenBeer,
   onOpenStoreList,
   onOpenBeerList,
+  onOpenSearch,
+  onOpenOrders,
+  onOpenProfile,
   theme,
   themeMode,
   onToggleTheme,
 }: LandingProps) {
   const style = useMemo(() => createStyles(theme), [theme]);
+  const beerCards: BeerWithStore[] = useMemo(() => getAllBeers(storesData).slice(0, 4), [storesData]);
 
   return (
     <View style={style.container}>
@@ -58,7 +64,7 @@ export default function Landing({
       >
         <View style={style.headerRow}>
           <Text style={style.addressText}>Entrega em Asa Sul, Brasilia</Text>
-          <TouchableOpacity style={style.notificationButton}>
+          <TouchableOpacity style={style.notificationButton} onPress={onOpenOrders}>
             <Text style={style.notificationIcon}>NL</Text>
             <View style={style.notificationBadge}>
               <Text style={style.notificationBadgeText}>5</Text>
@@ -67,13 +73,21 @@ export default function Landing({
         </View>
 
         <View style={style.greetingRow}>
-          <Text style={style.greetingText}>Ola, visitante</Text>
-          <TouchableOpacity style={style.loginChip} onPress={onRequestLogin}>
-            <Text style={style.loginChipText}>Entrar</Text>
+          <Text style={style.greetingText}>
+            {currentUser ? `Ola, ${currentUser.name}` : "Ola, visitante"}
+          </Text>
+          <TouchableOpacity style={style.loginChip} onPress={onHeaderAction}>
+            <Text style={style.loginChipText}>{headerActionLabel}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={style.guestHelperText}>Voce pode explorar tudo, mas sem finalizar compra.</Text>
+        <Text style={style.guestHelperText}>
+          {currentUser
+            ? currentUser.role === "buyer"
+              ? "Voce ja pode comprar e acompanhar pedidos."
+              : "Voce esta vendo a experiencia da sua cervejaria e do app como vendedor."
+            : "Voce pode explorar tudo, mas sem finalizar compra."}
+        </Text>
 
         <View style={style.categoriesGrid}>
           {categories.map((item) => (
@@ -92,10 +106,12 @@ export default function Landing({
 
         <View style={style.bannerCard}>
           <Text style={style.bannerOverline}>choppnow</Text>
-          <Text style={style.bannerTitle}>Precos bons para descobrir sua proxima loja favorita</Text>
-          <Text style={style.bannerSubtitle}>Ative o login para pedir e acompanhar entregas em tempo real.</Text>
-          <TouchableOpacity style={style.bannerButton} onPress={onRequestLogin}>
-            <Text style={style.bannerButtonText}>Entrar para comprar</Text>
+          <Text style={style.bannerTitle}>Explore, compre e gerencie cervejas artesanais em um so app</Text>
+          <Text style={style.bannerSubtitle}>
+            Busca com filtros, compras mockadas, acompanhamento de pedidos e perfil de vendedor para publicar produtos.
+          </Text>
+          <TouchableOpacity style={style.bannerButton} onPress={currentUser ? onOpenSearch : onHeaderAction}>
+            <Text style={style.bannerButtonText}>{currentUser ? "Buscar cervejas" : "Entrar para testar"}</Text>
           </TouchableOpacity>
         </View>
 
@@ -107,7 +123,7 @@ export default function Landing({
         </View>
 
         <View style={style.storeRow}>
-          {stores.map((store) => (
+          {storesData.map((store) => (
             <TouchableOpacity
               key={store.id}
               style={style.storeCard}
@@ -148,23 +164,14 @@ export default function Landing({
         </View>
       </ScrollView>
 
-      <View style={style.bottomBar}>
-        {bottomTabs.map((tab, index) => {
-          const isActive = index === 0;
-          return (
-            <TouchableOpacity key={tab.id} style={style.bottomItem}>
-              <View style={[style.bottomIcon, isActive ? style.bottomIconActive : null]}>
-                <Text style={[style.bottomIconText, isActive ? style.bottomIconTextActive : null]}>
-                  {tab.short}
-                </Text>
-              </View>
-              <Text style={[style.bottomLabel, isActive ? style.bottomLabelActive : null]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <AppBottomNav
+        theme={theme}
+        activeTab="home"
+        onOpenHome={() => undefined}
+        onOpenSearch={onOpenSearch}
+        onOpenOrders={onOpenOrders}
+        onOpenProfile={onOpenProfile}
+      />
     </View>
   );
 }

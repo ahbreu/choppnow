@@ -1,0 +1,176 @@
+import { StyleSheet } from "react-native";
+import { AppTheme } from "../../global/themes";
+
+export function createStyles(theme: AppTheme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    contentContainer: {
+      paddingTop: 62,
+      paddingBottom: 120,
+      paddingHorizontal: 20,
+    },
+    headerCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 22,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    avatar: {
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.primaryDark,
+    },
+    avatarText: {
+      color: theme.colors.textPrimary,
+      fontSize: 18,
+      fontWeight: "800",
+    },
+    title: {
+      marginTop: 14,
+      color: theme.colors.textPrimary,
+      fontSize: 26,
+      fontWeight: "800",
+    },
+    subtitle: {
+      marginTop: 6,
+      color: theme.colors.textSecondary,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    badgeRow: {
+      marginTop: 12,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    badge: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+      backgroundColor: theme.colors.surfaceElevated,
+    },
+    badgeText: {
+      color: theme.colors.primary,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    sectionTitle: {
+      marginTop: 24,
+      marginBottom: 12,
+      color: theme.colors.textPrimary,
+      fontSize: 20,
+      fontWeight: "800",
+    },
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 18,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: 10,
+    },
+    cardTitle: {
+      color: theme.colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    cardText: {
+      marginTop: 6,
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    listButton: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: 10,
+    },
+    listButtonTitle: {
+      color: theme.colors.textPrimary,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    listButtonSubtitle: {
+      marginTop: 4,
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+    },
+    actionButton: {
+      marginTop: 10,
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: theme.colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    actionButtonText: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    secondaryButton: {
+      marginTop: 10,
+      height: 48,
+      borderRadius: 14,
+      backgroundColor: theme.colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    secondaryButtonText: {
+      color: theme.colors.textPrimary,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    input: {
+      marginBottom: 10,
+      height: 48,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      backgroundColor: theme.colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      color: theme.colors.textPrimary,
+    },
+    textArea: {
+      height: 96,
+      textAlignVertical: "top",
+      paddingTop: 12,
+    },
+    helperText: {
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    credentialsBox: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 18,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      marginBottom: 10,
+    },
+    credentialsTitle: {
+      color: theme.colors.textPrimary,
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    credentialsText: {
+      marginTop: 6,
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+  });
+}

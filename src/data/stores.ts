@@ -6,6 +6,7 @@ export type BeerItem = {
   price: string;
   rating: number;
   description: string;
+  ibu: number;
 };
 
 export type StoreItem = {
@@ -26,7 +27,7 @@ export type BeerWithStore = BeerItem & {
   storeAddress: string;
 };
 
-export const stores: StoreItem[] = [
+export const initialStores: StoreItem[] = [
   {
     id: "1",
     name: "Apoena Cervejaria",
@@ -45,6 +46,7 @@ export const stores: StoreItem[] = [
         price: "R$ 13,90",
         rating: 4.6,
         description: "Leve, refrescante e com final seco para consumo diario.",
+        ibu: 18,
       },
       {
         id: "apoena-ipa",
@@ -54,6 +56,7 @@ export const stores: StoreItem[] = [
         price: "R$ 18,90",
         rating: 4.8,
         description: "Amargor presente, notas citricas e aroma intenso de lupo.",
+        ibu: 62,
       },
       {
         id: "apoena-weiss",
@@ -63,6 +66,7 @@ export const stores: StoreItem[] = [
         price: "R$ 16,90",
         rating: 4.7,
         description: "Corpo macio com notas de banana e cravo tipicas do estilo.",
+        ibu: 14,
       },
       {
         id: "apoena-stout",
@@ -72,6 +76,7 @@ export const stores: StoreItem[] = [
         price: "R$ 19,90",
         rating: 4.7,
         description: "Tostada, com cafe e chocolate amargo no retrogosto.",
+        ibu: 36,
       },
     ],
   },
@@ -93,6 +98,7 @@ export const stores: StoreItem[] = [
         price: "R$ 15,90",
         rating: 4.5,
         description: "Aromatica, citrica e com baixo teor alcoolico para long session.",
+        ibu: 38,
       },
       {
         id: "cruls-red-ale",
@@ -102,6 +108,7 @@ export const stores: StoreItem[] = [
         price: "R$ 16,90",
         rating: 4.6,
         description: "Caramelo equilibrado e amargor medio para beber facil.",
+        ibu: 28,
       },
       {
         id: "cruls-porter",
@@ -111,6 +118,7 @@ export const stores: StoreItem[] = [
         price: "R$ 18,50",
         rating: 4.7,
         description: "Escura e aveludada com notas de cacau e torra suave.",
+        ibu: 34,
       },
       {
         id: "cruls-lager",
@@ -120,6 +128,7 @@ export const stores: StoreItem[] = [
         price: "R$ 14,90",
         rating: 4.4,
         description: "Limpa, clara e muito refrescante para qualquer ocasiao.",
+        ibu: 16,
       },
     ],
   },
@@ -141,6 +150,7 @@ export const stores: StoreItem[] = [
         price: "R$ 17,90",
         rating: 4.6,
         description: "Notas citricas e de maracuja com amargor elegante.",
+        ibu: 42,
       },
       {
         id: "qp-belgian",
@@ -150,6 +160,7 @@ export const stores: StoreItem[] = [
         price: "R$ 20,90",
         rating: 4.7,
         description: "Frutada, levemente condimentada e com final seco.",
+        ibu: 22,
       },
       {
         id: "qp-sour",
@@ -159,6 +170,7 @@ export const stores: StoreItem[] = [
         price: "R$ 19,50",
         rating: 4.5,
         description: "Acida na medida com fruta tropical e alta drinkability.",
+        ibu: 10,
       },
       {
         id: "qp-brown-ale",
@@ -168,6 +180,7 @@ export const stores: StoreItem[] = [
         price: "R$ 18,90",
         rating: 4.6,
         description: "Toffee e castanhas em corpo medio e final suave.",
+        ibu: 26,
       },
     ],
   },
@@ -189,6 +202,7 @@ export const stores: StoreItem[] = [
         price: "R$ 14,90",
         rating: 4.7,
         description: "Amargor limpo e herbal com final seco e crocante.",
+        ibu: 24,
       },
       {
         id: "g17-hazy-ipa",
@@ -198,6 +212,7 @@ export const stores: StoreItem[] = [
         price: "R$ 22,90",
         rating: 4.9,
         description: "Macia, turva e super aromatica com perfil tropical.",
+        ibu: 46,
       },
       {
         id: "g17-dubbel",
@@ -207,6 +222,7 @@ export const stores: StoreItem[] = [
         price: "R$ 23,50",
         rating: 4.8,
         description: "Maltada com notas de frutas escuras e especiarias.",
+        ibu: 20,
       },
       {
         id: "g17-sour",
@@ -216,17 +232,18 @@ export const stores: StoreItem[] = [
         price: "R$ 20,90",
         rating: 4.6,
         description: "Acidez refrescante com fruta vermelha e final limpo.",
+        ibu: 12,
       },
     ],
   },
 ];
 
-export function getStoreById(id: string) {
-  return stores.find((store) => store.id === id);
+export function getStoreById(storeList: StoreItem[], id: string) {
+  return storeList.find((store) => store.id === id);
 }
 
-export function getAllBeers(): BeerWithStore[] {
-  return stores.flatMap((store) =>
+export function getAllBeers(storeList: StoreItem[]): BeerWithStore[] {
+  return storeList.flatMap((store) =>
     store.beers.map((beer) => ({
       ...beer,
       storeId: store.id,
@@ -237,6 +254,12 @@ export function getAllBeers(): BeerWithStore[] {
   );
 }
 
-export function getBeerById(id: string) {
-  return getAllBeers().find((beer) => beer.id === id);
+export function getBeerById(storeList: StoreItem[], id: string) {
+  return getAllBeers(storeList).find((beer) => beer.id === id);
+}
+
+export function getBitternessLabel(ibu: number) {
+  if (ibu <= 20) return "Baixo";
+  if (ibu <= 40) return "Medio";
+  return "Alto";
 }
