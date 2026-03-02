@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { style } from "./styles";
+import { getAllBeers, stores } from "../../data/stores";
+import ThemeToggle from "../../components/theme-toggle";
+import { AppTheme, ThemeMode } from "../../global/themes";
+import { createStyles } from "./styles";
 
 type Category = {
   id: string;
@@ -8,42 +11,23 @@ type Category = {
   short: string;
 };
 
-type Store = {
-  id: string;
-  name: string;
-  tag: string;
-  short: string;
-};
-
-type Beers = {
-  id: string;
-  name: string;
-  tag: string;
-  short: string;
-};
-
 type LandingProps = {
   onRequestLogin?: () => void;
+  onOpenStore?: (storeId: string) => void;
+  onOpenBeer?: (beerId: string) => void;
+  onOpenStoreList?: () => void;
+  onOpenBeerList?: () => void;
+  theme: AppTheme;
+  themeMode: ThemeMode;
+  onToggleTheme?: () => void;
 };
 
 const categories: Category[] = [
   { id: "cervejarias", label: "Cervejarias", short: "CV" },
-  { id: "cervejas", label: "Cervejas", short: "CJ" }
+  { id: "cervejas", label: "Cervejas", short: "CJ" },
 ];
 
-const stores: Store[] = [
-  { id: "1", name: "Apoena Cervejaria", tag: "R$ 5 off", short: "AC" },
-  { id: "2", name: "Cruls", tag: "Frete gratis", short: "CR" },
-  { id: "3", name: "QuatroPoderes", tag: "Ate R$ 10", short: "QP" },
-  { id: "4", name: "Galpão 17", tag: "Combo do dia", short: "G17" },
-];
-
-const beers: Beers[] = [
-  { id: "1", name: "Cerveja Apoena", tag: "Cerveja nova!", short: "CA" },
-  { id: "2", name: "Red IPA", tag: "Frete gratis", short: "RI" },
-  { id: "3", name: "Roleta Russa", tag: "Ate R$ 10", short: "RR" },
-  { id: "4", name: "Fiapinho", tag: "Combo do dia", short: "FP" },
-];
+const beerCards = getAllBeers().slice(0, 4);
 
 const bottomTabs = [
   { id: "home", label: "Inicio", short: "IN" },
@@ -52,9 +36,22 @@ const bottomTabs = [
   { id: "profile", label: "Perfil", short: "PF" },
 ];
 
-export default function Landing({ onRequestLogin }: LandingProps) {
+export default function Landing({
+  onRequestLogin,
+  onOpenStore,
+  onOpenBeer,
+  onOpenStoreList,
+  onOpenBeerList,
+  theme,
+  themeMode,
+  onToggleTheme,
+}: LandingProps) {
+  const style = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <View style={style.container}>
+      <ThemeToggle theme={theme} mode={themeMode} onToggle={onToggleTheme} />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={style.contentContainer}
@@ -80,7 +77,11 @@ export default function Landing({ onRequestLogin }: LandingProps) {
 
         <View style={style.categoriesGrid}>
           {categories.map((item) => (
-            <TouchableOpacity key={item.id} style={style.categoryCard}>
+            <TouchableOpacity
+              key={item.id}
+              style={style.categoryCard}
+              onPress={item.id === "cervejarias" ? onOpenStoreList : onOpenBeerList}
+            >
               <View style={style.categoryIcon}>
                 <Text style={style.categoryIconText}>{item.short}</Text>
               </View>
@@ -100,38 +101,48 @@ export default function Landing({ onRequestLogin }: LandingProps) {
 
         <View style={style.sectionHeader}>
           <Text style={style.sectionTitle}>Ultimas lojas</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={onOpenStoreList}>
             <Text style={style.sectionAction}>Ver mais</Text>
           </TouchableOpacity>
         </View>
 
         <View style={style.storeRow}>
           {stores.map((store) => (
-            <TouchableOpacity key={store.id} style={style.storeCard}>
+            <TouchableOpacity
+              key={store.id}
+              style={style.storeCard}
+              onPress={() => onOpenStore?.(store.id)}
+            >
               <View style={style.storeLogo}>
                 <Text style={style.storeLogoText}>{store.short}</Text>
               </View>
               <Text style={style.storeName}>{store.name}</Text>
               <Text style={style.storeTag}>{store.tag}</Text>
+              <Text style={style.storeMeta}>Avaliacao {store.rating.toFixed(1)} / 5.0</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         <View style={style.sectionHeader}>
           <Text style={style.sectionTitle}>Ultimas cervejas</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={onOpenBeerList}>
             <Text style={style.sectionAction}>Ver mais</Text>
           </TouchableOpacity>
         </View>
 
         <View style={style.beersRow}>
-          {beers.map((store) => (
-            <TouchableOpacity key={store.id} style={style.storeCard}>
+          {beerCards.map((beer) => (
+            <TouchableOpacity
+              key={beer.id}
+              style={style.storeCard}
+              onPress={() => onOpenBeer?.(beer.id)}
+            >
               <View style={style.storeLogo}>
-                <Text style={style.storeLogoText}>{store.short}</Text>
+                <Text style={style.storeLogoText}>{beer.style.slice(0, 2).toUpperCase()}</Text>
               </View>
-              <Text style={style.storeName}>{store.name}</Text>
-              <Text style={style.storeTag}>{store.tag}</Text>
+              <Text style={style.storeName}>{beer.name}</Text>
+              <Text style={style.storeTag}>{beer.storeName}</Text>
+              <Text style={style.storeMeta}>Avaliacao {beer.rating.toFixed(1)} / 5.0</Text>
             </TouchableOpacity>
           ))}
         </View>

@@ -1,19 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useGoogleRequest } from "../../services/auth/google";
 import Logo from "../../assets/logo.png";
-import { style } from "./styles";
+import ThemeToggle from "../../components/theme-toggle";
+import { AppTheme, ThemeMode } from "../../global/themes";
+import { createStyles } from "./styles";
 
 type LoginStep = "email" | "password";
 type LoginProps = {
     onContinueAsGuest?: () => void;
+    theme: AppTheme;
+    themeMode: ThemeMode;
+    onToggleTheme?: () => void;
 };
 
-export default function Login({ onContinueAsGuest }: LoginProps) {
+export default function Login({ onContinueAsGuest, theme, themeMode, onToggleTheme }: LoginProps) {
     const { request, response, promptAsync } = useGoogleRequest();
     const [step, setStep] = useState<LoginStep>("email");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const style = useMemo(() => createStyles(theme), [theme]);
 
     useEffect(() => {
         if (response?.type === "success") {
@@ -36,6 +42,8 @@ export default function Login({ onContinueAsGuest }: LoginProps) {
 
     return (
         <View style={style.container}>
+            <ThemeToggle theme={theme} mode={themeMode} onToggle={onToggleTheme} />
+
             <View style={style.topPanel}>
                 <Image source={Logo} style={style.logo} resizeMode="contain" />
             </View>
