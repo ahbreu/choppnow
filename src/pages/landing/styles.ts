@@ -2,6 +2,8 @@ import { StyleSheet } from "react-native";
 import { AppTheme } from "../../global/themes";
 
 export function createStyles(theme: AppTheme) {
+  const isDark = theme.mode === "dark";
+
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -11,6 +13,14 @@ export function createStyles(theme: AppTheme) {
       paddingTop: 64,
       paddingBottom: 140,
       paddingHorizontal: 20,
+    },
+    brandRow: {
+      alignItems: "flex-start",
+      marginBottom: 6,
+    },
+    brandLogo: {
+      width: 138,
+      height: 42,
     },
     headerRow: {
       flexDirection: "row",
@@ -36,7 +46,7 @@ export function createStyles(theme: AppTheme) {
     },
     notificationIcon: {
       color: theme.colors.textSecondary,
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: "700",
     },
     notificationBadge: {
@@ -52,7 +62,7 @@ export function createStyles(theme: AppTheme) {
       paddingHorizontal: 4,
     },
     notificationBadgeText: {
-      color: theme.colors.textPrimary,
+      color: "#FFFFFF",
       fontSize: 10,
       fontWeight: "700",
     },
@@ -69,7 +79,7 @@ export function createStyles(theme: AppTheme) {
     },
     loginChip: {
       borderWidth: 1,
-      borderColor: theme.colors.primaryDark,
+      borderColor: theme.colors.primary,
       backgroundColor: theme.colors.surfaceElevated,
       borderRadius: 18,
       paddingHorizontal: 12,
@@ -124,13 +134,13 @@ export function createStyles(theme: AppTheme) {
     bannerCard: {
       marginTop: 24,
       borderRadius: 24,
-      backgroundColor: theme.colors.primaryDark,
+      backgroundColor: isDark ? theme.colors.surfaceElevated : "#111111",
       padding: 20,
       borderWidth: 1,
       borderColor: theme.colors.primary,
     },
     bannerOverline: {
-      color: theme.colors.primaryGlow,
+      color: theme.colors.primary,
       fontSize: 12,
       fontWeight: "700",
       letterSpacing: 0.8,
@@ -138,14 +148,14 @@ export function createStyles(theme: AppTheme) {
     },
     bannerTitle: {
       marginTop: 10,
-      color: theme.colors.textPrimary,
+      color: "#FFFFFF",
       fontSize: 28,
       fontWeight: "800",
       lineHeight: 32,
     },
     bannerSubtitle: {
       marginTop: 10,
-      color: theme.colors.textPrimary,
+      color: "#F3F3F3",
       opacity: 0.88,
       fontSize: 14,
       lineHeight: 20,
@@ -154,12 +164,12 @@ export function createStyles(theme: AppTheme) {
       marginTop: 16,
       alignSelf: "flex-start",
       borderRadius: 18,
-      backgroundColor: theme.colors.textPrimary,
+      backgroundColor: theme.colors.primary,
       paddingHorizontal: 14,
       paddingVertical: 10,
     },
     bannerButtonText: {
-      color: theme.colors.background,
+      color: "#111111",
       fontWeight: "700",
       fontSize: 13,
     },
@@ -176,9 +186,119 @@ export function createStyles(theme: AppTheme) {
       fontWeight: "700",
     },
     sectionAction: {
-      color: theme.colors.primary,
+      color: theme.colors.accent,
       fontSize: 16,
       fontWeight: "700",
+    },
+    highlightList: {
+      flexDirection: "row",
+      columnGap: 10,
+    },
+    highlightCard: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 16,
+      padding: 12,
+    },
+    highlightBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: theme.colors.primary,
+      color: "#111111",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    highlightTitle: {
+      marginTop: 10,
+      color: theme.colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    highlightSubtitle: {
+      marginTop: 6,
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    campaignList: {
+      rowGap: 10,
+    },
+    campaignCard: {
+      backgroundColor: theme.colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: 16,
+      padding: 14,
+    },
+    campaignKicker: {
+      color: theme.colors.accent,
+      fontSize: 11,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    },
+    campaignTitle: {
+      marginTop: 8,
+      color: theme.colors.textPrimary,
+      fontSize: 18,
+      fontWeight: "800",
+    },
+    campaignDescription: {
+      marginTop: 6,
+      color: theme.colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
+    },
+    campaignAction: {
+      marginTop: 10,
+      color: theme.colors.primary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    storyCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: 14,
+      rowGap: 12,
+    },
+    storyRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      columnGap: 10,
+    },
+    storyIndexBubble: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: theme.colors.accent,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 2,
+    },
+    storyIndexText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    storyTextWrap: {
+      flex: 1,
+    },
+    storyTitle: {
+      color: theme.colors.textPrimary,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    storyDescription: {
+      marginTop: 4,
+      color: theme.colors.textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
     },
     storeRow: {
       flexDirection: "row",
@@ -221,62 +341,15 @@ export function createStyles(theme: AppTheme) {
     },
     storeTag: {
       marginTop: 4,
-      color: theme.colors.success,
+      color: theme.colors.accent,
       fontSize: 13,
       fontWeight: "600",
     },
     storeMeta: {
       marginTop: 6,
-      color: theme.colors.textSecondary,
+      color: theme.colors.textMuted,
       fontSize: 12,
       fontWeight: "500",
-    },
-    bottomBar: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: theme.colors.surface,
-      borderTopWidth: 1,
-      borderColor: theme.colors.border,
-      paddingTop: 10,
-      paddingBottom: 20,
-      paddingHorizontal: 10,
-      flexDirection: "row",
-      justifyContent: "space-between",
-    },
-    bottomItem: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 4,
-    },
-    bottomIcon: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: theme.colors.surfaceElevated,
-    },
-    bottomIconActive: {
-      backgroundColor: theme.colors.primary,
-    },
-    bottomIconText: {
-      color: theme.colors.textSecondary,
-      fontSize: 10,
-      fontWeight: "700",
-    },
-    bottomIconTextActive: {
-      color: theme.colors.textOnPrimary,
-    },
-    bottomLabel: {
-      color: theme.colors.textMuted,
-      fontSize: 11,
-      fontWeight: "600",
-    },
-    bottomLabelActive: {
-      color: theme.colors.textPrimary,
     },
   });
 }

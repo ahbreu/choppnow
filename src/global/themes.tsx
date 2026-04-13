@@ -28,58 +28,50 @@ export type AppTheme = {
 export const darkTheme: AppTheme = {
   mode: "dark",
   colors: {
-    background: "#0B1C2D",        // Azul petróleo profundo
-    surface: "#112A44",           // Azul médio
-    surfaceElevated: "#163555",   // Azul mais claro para destaque
-    border: "#1F3A56",
-
-    primary: "#D4AF37",           // Dourado clássico
-    primaryHover: "#F5C518",      // Dourado vibrante
-    primaryDark: "#B8932F",       // Dourado escuro
-    primaryGlow: "#FFD700",       // Glow dourado
-
-    accent: "#2563EB",            // Azul vibrante
-    accentHover: "#3B82F6",
-    accentSoft: "#1E3A8A",
-
+    background: "#0A0A0A",
+    surface: "#141414",
+    surfaceElevated: "#1D1D1D",
+    border: "#2D2D2D",
+    primary: "#F5C518",
+    primaryHover: "#FFD33D",
+    primaryDark: "#C79406",
+    primaryGlow: "#FFE58A",
+    accent: "#D62828",
+    accentHover: "#FF554F",
+    accentSoft: "#3A1111",
     textPrimary: "#FFFFFF",
-    textSecondary: "#C9D4E3",
-    textMuted: "#8CA3B8",
-    textOnPrimary: "#0B1C2D",
-
-    success: "#22C55E",
-    warning: "#FACC15",
-    error: "#DC2626",
-    info: "#38BDF8",
+    textSecondary: "#E5E5E5",
+    textMuted: "#A3A3A3",
+    textOnPrimary: "#111111",
+    success: "#F5C518",
+    warning: "#FFD33D",
+    error: "#E53935",
+    info: "#FFFFFF",
   },
 };
 
 export const lightTheme: AppTheme = {
   mode: "light",
   colors: {
-    background: "#F4F7FB",        // Branco azulado
+    background: "#FFFFFF",
     surface: "#FFFFFF",
-    surfaceElevated: "#EAF1F8",
-    border: "#D6E2F0",
-
-    primary: "#D4AF37",
-    primaryHover: "#E6C76A",
-    primaryDark: "#B8932F",
-    primaryGlow: "#F5C518",
-
-    accent: "#1E3A8A",
-    accentHover: "#2563EB",
-    accentSoft: "#DBEAFE",
-
-    textPrimary: "#0B1C2D",
-    textSecondary: "#334155",
-    textMuted: "#64748B",
-    textOnPrimary: "#0B1C2D",
-
-    success: "#16A34A",
-    warning: "#EAB308",
-    error: "#B91C1C",
-    info: "#0284C7",
+    surfaceElevated: "#FFF5D1",
+    border: "#E6E6E6",
+    primary: "#F5C518",
+    primaryHover: "#F0B400",
+    primaryDark: "#C79406",
+    primaryGlow: "#FFE58A",
+    accent: "#D62828",
+    accentHover: "#BE1F1F",
+    accentSoft: "#F8D9D9",
+    textPrimary: "#111111",
+    textSecondary: "#2B2B2B",
+    textMuted: "#636363",
+    textOnPrimary: "#111111",
+    success: "#C79406",
+    warning: "#F0B400",
+    error: "#D62828",
+    info: "#111111",
   },
 };
 

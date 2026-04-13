@@ -2,7 +2,14 @@ import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import AppBottomNav from "../../components/app-bottom-nav";
 import ThemeToggle from "../../components/theme-toggle";
-import { OrderItemRecord, isActiveOrder } from "../../data/orders";
+import {
+  canAdvanceOrderStatus,
+  getOrderStateModel,
+  getOrderTimeline,
+  OrderItemRecord,
+  OrderStatusCode,
+  isActiveOrder,
+} from "../../data/orders";
 import { StoreItem, getAllBeers, getStoreById } from "../../data/stores";
 import { UserProfile } from "../../data/users";
 import { AppTheme, ThemeMode } from "../../global/themes";
@@ -15,6 +22,9 @@ type OrdersProps = {
   currentUser: UserProfile | null;
   orders: OrderItemRecord[];
   storesData: StoreItem[];
+  sellerAvailability?: Record<string, boolean>;
+  onAdvanceOrder?: (orderId: string) => void;
+  onToggleSellerAvailability?: (storeId: string) => void;
   onOpenHome?: () => void;
   onOpenSearch?: () => void;
   onOpenProfile?: () => void;
@@ -28,6 +38,9 @@ export default function Orders({
   currentUser,
   orders,
   storesData,
+  sellerAvailability,
+  onAdvanceOrder,
+  onToggleSellerAvailability,
   onOpenHome,
   onOpenSearch,
   onOpenProfile,
@@ -47,6 +60,45 @@ export default function Orders({
   const activeOrders = visibleOrders.filter((order) => isActiveOrder(order.status));
   const pastOrders = visibleOrders.filter((order) => !isActiveOrder(order.status));
 
+  const sellerStore =
+    currentUser?.role === "seller" && currentUser.sellerStoreId
+      ? getStoreById(storesData, currentUser.sellerStoreId)
+      : undefined;
+
+  const sellerQueueSummary = useMemo(() => {
+    return activeOrders.reduce(
+      (summary, order) => {
+        summary.total += 1;
+        summary[order.status] += 1;
+        return summary;
+      },
+      {
+        total: 0,
+        placed: 0,
+        confirmed: 0,
+        preparing: 0,
+        ready_for_dispatch: 0,
+        out_for_delivery: 0,
+      } as Record<OrderStatusCode | "total", number>
+    );
+  }, [activeOrders]);
+
+  const sellerQueueStages = [
+    { key: "placed", label: "Novos pedidos", value: sellerQueueSummary.placed },
+    { key: "confirmed", label: "Confirmados", value: sellerQueueSummary.confirmed },
+    { key: "preparing", label: "Em preparo", value: sellerQueueSummary.preparing },
+    {
+      key: "ready_for_dispatch",
+      label: "Aguardando motoboy",
+      value: sellerQueueSummary.ready_for_dispatch,
+    },
+    {
+      key: "out_for_delivery",
+      label: "Em rota",
+      value: sellerQueueSummary.out_for_delivery,
+    },
+  ];
+
   function getOrderItemsLabel(order: OrderItemRecord) {
     return order.items
       .map((item) => {
@@ -57,43 +109,103 @@ export default function Orders({
       .join(", ");
   }
 
-  function getStatusStyles(status: OrderItemRecord["status"]) {
-    if (status === "Entregue") {
+  function getStatusStyles(status: OrderStatusCode) {
+    if (status === "delivered") {
       return {
-        backgroundColor: theme.colors.accentSoft,
-        textColor: theme.colors.accent,
-      };
-    }
-    if (status === "Saiu para entrega") {
-      return {
-        backgroundColor: theme.colors.primaryGlow,
+        backgroundColor: theme.colors.success,
         textColor: theme.colors.textOnPrimary,
       };
     }
+
+    if (status === "out_for_delivery") {
+      return {
+        backgroundColor: theme.colors.warning,
+        textColor: theme.colors.textOnPrimary,
+      };
+    }
+
+    if (status === "placed" || status === "confirmed") {
+      return {
+        backgroundColor: theme.colors.error,
+        textColor: theme.colors.textPrimary,
+      };
+    }
+
     return {
-      backgroundColor: theme.colors.surfaceElevated,
-      textColor: theme.colors.primary,
+      backgroundColor: theme.colors.primary,
+      textColor: theme.colors.textOnPrimary,
     };
   }
+
+  function renderOrderCard(order: OrderItemRecord, role: "buyer" | "seller") {
+    const store = getStoreById(storesData, order.storeId);
+    const state = getOrderStateModel(order.status);
+    const statusStyle = getStatusStyles(order.status);
+    const timeline = getOrderTimeline(order.status);
+
+    return (
+      <View key={order.id} style={style.card}>
+        <View style={style.cardHeader}>
+          <Text style={style.orderId}>#{order.id}</Text>
+          <View style={[style.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
+            <Text style={[style.statusText, { color: statusStyle.textColor }]}>
+              {role === "seller" ? state.partnerLabel : state.customerLabel}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={style.cardText}>{store?.name || "Loja"}</Text>
+        <Text style={style.cardText}>{getOrderItemsLabel(order)}</Text>
+        <Text style={style.cardText}>Criado em {order.createdAt}</Text>
+        <Text style={style.cardText}>SLA alvo: {order.slaMinutes} min</Text>
+        <Text style={style.messageText}>
+          {role === "seller" ? state.partnerMessage : state.customerMessage}
+        </Text>
+
+        <View style={style.timelineRow}>
+          {timeline.map((step) => (
+            <View
+              key={step.label}
+              style={[
+                style.timelineDot,
+                step.done ? style.timelineDotDone : undefined,
+                step.current ? style.timelineDotCurrent : undefined,
+              ]}
+            />
+          ))}
+        </View>
+        <Text style={style.timelineLabel}>{state.stepLabel} no fluxo operacional</Text>
+
+        {role === "seller" && canAdvanceOrderStatus(order.status) ? (
+          <TouchableOpacity style={style.advanceButton} onPress={() => onAdvanceOrder?.(order.id)}>
+            <Text style={style.advanceButtonText}>Avancar para proximo status</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  }
+
+  const isSeller = currentUser?.role === "seller";
+  const sellerIsOnline = sellerStore ? Boolean(sellerAvailability?.[sellerStore.id]) : false;
 
   return (
     <View style={style.container}>
       <ThemeToggle theme={theme} mode={themeMode} onToggle={onToggleTheme} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={style.contentContainer}>
-        <Text style={style.title}>Pedidos</Text>
+        <Text style={style.title}>Operacao de pedidos</Text>
         <Text style={style.subtitle}>
           {currentUser
-            ? currentUser.role === "seller"
-              ? "Acompanhe os pedidos da sua cervejaria e os status de entrega."
-              : "Veja seus pedidos atuais e o historico de compras."
+            ? isSeller
+              ? "Console do parceiro para disponibilidade, fila e avancos de status."
+              : "Timeline do seu pedido com status operacional e SLA de entrega."
             : "Entre com uma conta para acompanhar pedidos ativos e historico."}
         </Text>
 
         {!currentUser ? (
           <View style={style.emptyCard}>
             <Text style={style.emptyText}>
-              Como visitante, voce pode explorar o app, mas nao consegue acompanhar pedidos. Entre com uma conta de teste para validar esse fluxo.
+              Como visitante, voce pode explorar o app, mas nao consegue acompanhar pedidos.
             </Text>
             <TouchableOpacity style={style.ctaButton} onPress={onRequestLogin}>
               <Text style={style.ctaButtonText}>Ir para login</Text>
@@ -101,34 +213,46 @@ export default function Orders({
           </View>
         ) : (
           <>
-            <Text style={style.sectionTitle}>Atuais</Text>
+            {isSeller && sellerStore ? (
+              <View style={style.consoleCard}>
+                <View style={style.consoleHeader}>
+                  <Text style={style.consoleTitle}>Parceiro: {sellerStore.name}</Text>
+                  <TouchableOpacity
+                    style={[
+                      style.availabilityButton,
+                      sellerIsOnline ? style.availabilityOn : style.availabilityOff,
+                    ]}
+                    onPress={() => onToggleSellerAvailability?.(sellerStore.id)}
+                  >
+                    <Text style={style.availabilityButtonText}>
+                      {sellerIsOnline ? "Recebendo pedidos" : "Pausado"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={style.queueSummaryCard}>
+                  <Text style={style.queueSummaryLabel}>Fila ativa agora</Text>
+                  <Text style={style.queueSummaryValue}>{sellerQueueSummary.total} pedidos</Text>
+                </View>
+
+                <View style={style.queueColumns}>
+                  {sellerQueueStages.map((stage) => (
+                    <View key={stage.key} style={style.queueColumnItem}>
+                      <Text style={style.queueColumnLabel}>{stage.label}</Text>
+                      <Text style={style.queueColumnValue}>{stage.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            <Text style={style.sectionTitle}>Ativos</Text>
             {activeOrders.length === 0 ? (
               <View style={style.emptyCard}>
                 <Text style={style.emptyText}>Nenhum pedido em andamento no momento.</Text>
               </View>
             ) : (
-              activeOrders.map((order) => {
-                const store = getStoreById(storesData, order.storeId);
-                const statusStyle = getStatusStyles(order.status);
-                return (
-                  <View key={order.id} style={style.card}>
-                    <View style={style.cardHeader}>
-                      <Text style={style.orderId}>#{order.id}</Text>
-                      <View style={[style.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
-                        <Text style={[style.statusText, { color: statusStyle.textColor }]}>
-                          {order.status}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={style.cardText}>{store?.name || "Loja"}</Text>
-                    <Text style={style.cardText}>{getOrderItemsLabel(order)}</Text>
-                    <Text style={style.cardText}>
-                      Feito em {order.createdAt} - ETA {order.eta}
-                    </Text>
-                    <Text style={style.totalText}>{order.total}</Text>
-                  </View>
-                );
-              })
+              activeOrders.map((order) => renderOrderCard(order, isSeller ? "seller" : "buyer"))
             )}
 
             <Text style={style.sectionTitle}>Historico</Text>
@@ -137,26 +261,7 @@ export default function Orders({
                 <Text style={style.emptyText}>Nenhum pedido finalizado por enquanto.</Text>
               </View>
             ) : (
-              pastOrders.map((order) => {
-                const store = getStoreById(storesData, order.storeId);
-                const statusStyle = getStatusStyles(order.status);
-                return (
-                  <View key={order.id} style={style.card}>
-                    <View style={style.cardHeader}>
-                      <Text style={style.orderId}>#{order.id}</Text>
-                      <View style={[style.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
-                        <Text style={[style.statusText, { color: statusStyle.textColor }]}>
-                          {order.status}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={style.cardText}>{store?.name || "Loja"}</Text>
-                    <Text style={style.cardText}>{getOrderItemsLabel(order)}</Text>
-                    <Text style={style.cardText}>Finalizado - {order.createdAt}</Text>
-                    <Text style={style.totalText}>{order.total}</Text>
-                  </View>
-                );
-              })
+              pastOrders.map((order) => renderOrderCard(order, isSeller ? "seller" : "buyer"))
             )}
           </>
         )}
@@ -173,4 +278,3 @@ export default function Orders({
     </View>
   );
 }
-

@@ -287,7 +287,7 @@ export default function Profile({
                     <Text style={style.cardTitle}>Pedido #{order.id}</Text>
                     <Text style={style.cardText}>Status atual: {order.status}</Text>
                     <Text style={style.cardText}>Criado em {order.createdAt}</Text>
-                    {order.status !== "Entregue" ? (
+                    {order.status !== "delivered" ? (
                       <TouchableOpacity style={style.actionButton} onPress={() => onAdvanceOrder?.(order.id)}>
                         <Text style={style.actionButtonText}>Avancar status</Text>
                       </TouchableOpacity>
@@ -320,4 +320,3 @@ export default function Profile({
     </View>
   );
 }
-
