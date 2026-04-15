@@ -2,6 +2,8 @@
 
 Snapshot do estado atual do `choppnow` em 2026-04-14.
 
+Para o fluxo de retomada em modo `Codex-only`, veja `PLAYBOOK.md`.
+
 ## Contexto
 
 - Branch atual: `master`

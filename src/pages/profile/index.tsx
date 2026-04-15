@@ -4,7 +4,7 @@ import AppBottomNav from "../../components/app-bottom-nav";
 import ThemeToggle from "../../components/theme-toggle";
 import { OrderItemRecord } from "../../data/orders";
 import { StoreItem, getAllBeers, getStoreById } from "../../data/stores";
-import { UserProfile, demoUsers } from "../../data/users";
+import { UserProfile } from "../../data/users";
 import { AppTheme, ThemeMode } from "../../global/themes";
 import { createStyles } from "./styles";
 
@@ -22,6 +22,7 @@ type ProfileProps = {
   themeMode: ThemeMode;
   onToggleTheme?: () => void;
   currentUser: UserProfile | null;
+  demoAccounts?: UserProfile[];
   storesData: StoreItem[];
   orders: OrderItemRecord[];
   onRequestLogin?: () => void;
@@ -41,6 +42,7 @@ export default function Profile({
   themeMode,
   onToggleTheme,
   currentUser,
+  demoAccounts = [],
   storesData,
   orders,
   onRequestLogin,
@@ -116,7 +118,7 @@ export default function Profile({
             </View>
 
             <Text style={style.sectionTitle}>Contas de teste</Text>
-            {demoUsers.map((user) => (
+            {demoAccounts.map((user) => (
               <View key={user.id} style={style.credentialsBox}>
                 <Text style={style.credentialsTitle}>{user.name}</Text>
                 <Text style={style.credentialsText}>Email: {user.email}</Text>
@@ -126,6 +128,11 @@ export default function Profile({
                 </TouchableOpacity>
               </View>
             ))}
+            {demoAccounts.length === 0 ? (
+              <View style={style.card}>
+                <Text style={style.cardText}>Nenhuma conta demo configurada neste build.</Text>
+              </View>
+            ) : null}
 
             <TouchableOpacity style={style.secondaryButton} onPress={onRequestLogin}>
               <Text style={style.secondaryButtonText}>Ir para tela de login</Text>

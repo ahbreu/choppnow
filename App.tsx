@@ -1,31 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Alert } from "react-native";
 import {
-  getDefaultNextOrderStatus,
-  getOrderStateModel,
   initialOrders,
-  isOrderTransitionAllowed,
   OperationalNotification,
-  OrderItemRecord,
   OrderStatusCode,
 } from "./src/data/orders";
 import { SellerProductDraft } from "./src/pages/profile";
-import { getAllBeers, getBeerById, getStoreById, initialStores, StoreItem } from "./src/data/stores";
-import { authenticateUser, demoUsers, getUserById, UserProfile } from "./src/data/users";
-import {
-  CatalogFilterPreset,
-  DiscoveryCampaign,
-  DiscoveryHighlight,
-  DiscoveryStoryStep,
-  catalogFilterPresets,
-  discoveryStorySteps,
-  homeCampaigns,
-  homeHighlights,
-} from "./src/data/discovery";
-import { getTheme, ThemeMode } from "./src/global/themes";
+import { getAllBeers, getBeerById, getStoreById, initialStores } from "./src/data/stores";
+import { UserProfile } from "./src/data/users";
+import { getTheme } from "./src/global/themes";
 import BeerDetails from "./src/pages/beer-details";
 import Cart from "./src/pages/cart";
-import Catalog, { CatalogMode } from "./src/pages/catalog";
+import Catalog from "./src/pages/catalog";
 import Checkout from "./src/pages/checkout";
 import Landing from "./src/pages/landing";
 import Login from "./src/pages/login";
@@ -36,64 +22,40 @@ import StoreDetails from "./src/pages/store-details";
 import {
   CheckoutDraft,
   SelectedAddOn,
-  formatCurrency,
   getCartItemsCount,
-  getCartSubtotal,
-  getCheckoutTotals,
   getUpsellSuggestions,
   initialCartState,
   parsePriceToNumber,
 } from "./src/data/commerce";
-import { getItem, removeItem, saveItem } from "./src/utils/storage";
 import {
   flushInventorySyncQueueWithRetry,
-  loadCatalogRuntimeData,
   queueInventoryAdjustment,
 } from "./src/services/catalog/repository";
-import { localCheckoutGateway } from "./src/services/checkout/local";
+import { demoAuthGateway } from "./src/services/auth/demo";
+import { useBuyerCartPersistence } from "./src/hooks/useBuyerCartPersistence";
+import { useCatalogRuntime } from "./src/hooks/useCatalogRuntime";
+import { useThemePreference } from "./src/hooks/useThemePreference";
+import { Route } from "./src/navigation/routes";
+import { OrdersGatewayError } from "./src/services/orders/gateway";
+import { localOrdersGateway } from "./src/services/orders/local";
 
-type Route =
-  | { name: "login" }
-  | { name: "landing" }
-  | { name: "search" }
-  | { name: "orders" }
-  | { name: "profile" }
-  | { name: "cart" }
-  | { name: "checkout" }
-  | { name: "catalog"; mode: CatalogMode }
-  | { name: "store-details"; storeId: string }
-  | { name: "beer-details"; beerId: string };
-
-const THEME_STORAGE_KEY = "choppnow-theme-mode";
-const CART_STORAGE_KEY_PREFIX = "choppnow-cart";
 const INITIAL_SELLER_AVAILABILITY = initialStores.reduce<Record<string, boolean>>((acc, store) => {
   acc[store.id] = true;
   return acc;
 }, {});
 
-function getCartStorageKey(userId: string) {
-  return `${CART_STORAGE_KEY_PREFIX}:${userId}`;
-}
-
-function isPersistedCartState(value: unknown): value is typeof initialCartState {
-  if (!value || typeof value !== "object") return false;
-  const cart = value as typeof initialCartState;
-  return (
-    (typeof cart.storeId === "string" || cart.storeId === null) &&
-    (typeof cart.storeName === "string" || cart.storeName === null) &&
-    Array.isArray(cart.items)
-  );
-}
-
 export default function App() {
   const [routes, setRoutes] = useState<Route[]>([{ name: "landing" }]);
-  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
-  const [isThemeReady, setIsThemeReady] = useState(false);
-  const [storesData, setStoresData] = useState<StoreItem[]>(initialStores);
-  const [discoveryHighlights, setDiscoveryHighlights] = useState<DiscoveryHighlight[]>(homeHighlights);
-  const [discoveryCampaigns, setDiscoveryCampaigns] = useState<DiscoveryCampaign[]>(homeCampaigns);
-  const [discoveryStory, setDiscoveryStory] = useState<DiscoveryStoryStep[]>(discoveryStorySteps);
-  const [catalogFilters, setCatalogFilters] = useState<CatalogFilterPreset[]>(catalogFilterPresets);
+  const { themeMode, setThemeMode } = useThemePreference("dark");
+  const {
+    storesData,
+    setStoresData,
+    discoveryHighlights,
+    discoveryCampaigns,
+    discoveryStory,
+    catalogFilters,
+    refreshCatalogRuntime,
+  } = useCatalogRuntime();
   const [orders, setOrders] = useState(initialOrders);
   const [notifications, setNotifications] = useState<OperationalNotification[]>([]);
   const [cart, setCart] = useState(initialCartState);
@@ -106,98 +68,13 @@ export default function App() {
   const theme = useMemo(() => getTheme(themeMode), [themeMode]);
   const allBeers = useMemo(() => getAllBeers(storesData), [storesData]);
   const cartItemsCount = useMemo(() => getCartItemsCount(cart), [cart]);
+  const demoAccounts = useMemo(() => demoAuthGateway.listDemoAccounts(), []);
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadTheme() {
-      try {
-        const savedTheme = await getItem<ThemeMode>(THEME_STORAGE_KEY);
-        if (!mounted) return;
-        if (savedTheme === "dark" || savedTheme === "light") {
-          setThemeMode(savedTheme);
-        }
-      } catch {
-        // Keep default theme when storage is unavailable.
-      } finally {
-        if (mounted) {
-          setIsThemeReady(true);
-        }
-      }
-    }
-
-    loadTheme();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isThemeReady) return;
-
-    saveItem(THEME_STORAGE_KEY, themeMode).catch(() => {
-      // Ignore persistence failures and keep app usable.
-    });
-  }, [themeMode, isThemeReady]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadPersistedCart() {
-      if (!currentUser || currentUser.role !== "buyer") return;
-      const stored = await getItem<typeof initialCartState>(getCartStorageKey(currentUser.id));
-      if (!mounted) return;
-      if (isPersistedCartState(stored)) {
-        setCart(stored);
-      }
-    }
-
-    loadPersistedCart().catch(() => {
-      // Ignore cart hydration errors and keep current runtime cart.
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (!currentUser || currentUser.role !== "buyer") return;
-
-    if (cart.items.length === 0) {
-      removeItem(getCartStorageKey(currentUser.id)).catch(() => {
-        // Ignore local storage cleanup errors.
-      });
-      return;
-    }
-
-    saveItem(getCartStorageKey(currentUser.id), cart).catch(() => {
-      // Ignore cart persistence errors and keep checkout path usable.
-    });
-  }, [cart, currentUser]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadCatalogData() {
-      const runtimeCatalog = await loadCatalogRuntimeData();
-      if (!mounted) return;
-      setStoresData(runtimeCatalog.storesData);
-      setDiscoveryHighlights(runtimeCatalog.snapshot.discovery.highlights);
-      setDiscoveryCampaigns(runtimeCatalog.snapshot.discovery.campaigns);
-      setDiscoveryStory(runtimeCatalog.snapshot.discovery.storySteps);
-      setCatalogFilters(runtimeCatalog.snapshot.discovery.filters);
-    }
-
-    loadCatalogData().catch(() => {
-      // App remains functional with seeded in-memory state.
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  useBuyerCartPersistence({
+    currentUser,
+    cart,
+    setCart,
+  });
 
   const selectedStore = useMemo(() => {
     if (currentRoute.name !== "store-details") return undefined;
@@ -264,7 +141,7 @@ export default function App() {
   }
 
   function handleSignIn(email: string, password: string) {
-    const user = authenticateUser(email, password);
+    const user = demoAuthGateway.signInWithEmail(email, password);
     if (!user) return false;
 
     setCurrentUser(user);
@@ -274,7 +151,7 @@ export default function App() {
   }
 
   function handleUseDemoAccount(userId: string) {
-    const user = getUserById(userId);
+    const user = demoAuthGateway.getUserById(userId);
     if (!user) return;
 
     setCurrentUser(user);
@@ -286,6 +163,11 @@ export default function App() {
     setCurrentUser(null);
     setCart(initialCartState);
     setRootRoute({ name: "login" });
+  }
+
+  function appendNotifications(nextNotifications: OperationalNotification[]) {
+    if (nextNotifications.length === 0) return;
+    setNotifications((prev) => [...nextNotifications, ...prev].slice(0, 30));
   }
 
   function handleAddToCart(
@@ -396,56 +278,34 @@ export default function App() {
       return;
     }
 
-    let checkoutResult: Awaited<ReturnType<typeof localCheckoutGateway.submitCheckout>>;
     try {
-      checkoutResult = await localCheckoutGateway.submitCheckout(checkoutCart, draft);
-    } catch {
-      Alert.alert("Falha no checkout", "Nao foi possivel finalizar o checkout local.");
-      return;
-    }
-    const subtotal = getCartSubtotal(checkoutCart);
-    const { total } = getCheckoutTotals(subtotal, checkoutCart.items.length > 0);
-    const formattedTotal = formatCurrency(total);
-    const slaMinutes = draft.paymentMethod === "pix" ? 35 : 40;
-
-    const nextOrder: OrderItemRecord = {
-      id: `order-${Date.now()}`,
-      buyerId: currentUser.id,
-      storeId: resolvedStoreId,
-      items: checkoutCart.items.map((item) => ({
-        beerId: item.beerId,
-        quantity: item.quantity,
-      })),
-      total: formattedTotal,
-      createdAt: "Agora",
-      slaMinutes,
-      status: "placed",
-    };
-
-    setOrders((prev) => [nextOrder, ...prev]);
-    createOperationalNotifications(nextOrder, "placed");
-
-    Promise.all(
-      checkoutCart.items.map((item) =>
-        queueInventoryAdjustment(item.beerId, -item.quantity, "checkout-order-placed")
-      )
-    )
-      .then(() => flushInventorySyncQueueWithRetry({ maxAttempts: 2, retryDelayMs: 700 }))
-      .then(() => loadCatalogRuntimeData())
-      .then((runtimeCatalog) => {
-        setStoresData(runtimeCatalog.storesData);
-        setDiscoveryHighlights(runtimeCatalog.snapshot.discovery.highlights);
-        setDiscoveryCampaigns(runtimeCatalog.snapshot.discovery.campaigns);
-        setDiscoveryStory(runtimeCatalog.snapshot.discovery.storySteps);
-        setCatalogFilters(runtimeCatalog.snapshot.discovery.filters);
-      })
-      .catch(() => {
-        // Keep checkout flow resilient if inventory sync queue is unavailable.
+      const result = await localOrdersGateway.placeOrder({
+        buyer: currentUser,
+        cart: checkoutCart,
+        draft,
+        storeId: resolvedStoreId,
       });
 
-    setCart(initialCartState);
-    setRootRoute({ name: "orders" });
-    Alert.alert("Pedido recebido", `Checkout local confirmado (${checkoutResult.placeholderReference}).`);
+      setOrders((prev) => [result.order, ...prev]);
+      appendNotifications(result.notifications);
+
+      Promise.all(
+        checkoutCart.items.map((item) =>
+          queueInventoryAdjustment(item.beerId, -item.quantity, "checkout-order-placed")
+        )
+      )
+        .then(() => flushInventorySyncQueueWithRetry({ maxAttempts: 2, retryDelayMs: 700 }))
+        .then(() => refreshCatalogRuntime())
+        .catch(() => {
+          // Keep checkout flow resilient if inventory sync queue is unavailable.
+        });
+
+      setCart(initialCartState);
+      setRootRoute({ name: "orders" });
+      Alert.alert("Pedido recebido", `Checkout local confirmado (${result.checkoutReference}).`);
+    } catch {
+      Alert.alert("Falha no checkout", "Nao foi possivel finalizar o checkout local.");
+    }
   }
 
   function handleAddProduct(draft: SellerProductDraft) {
@@ -477,82 +337,39 @@ export default function App() {
     );
   }
 
-  function formatNotificationTime() {
-    return new Date().toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  function getSellerUserByStoreId(storeId: string) {
-    return demoUsers.find((user) => user.role === "seller" && user.sellerStoreId === storeId);
-  }
-
-  function createOperationalNotifications(order: OrderItemRecord, nextStatus: OrderStatusCode) {
-    const buyer = getUserById(order.buyerId);
-    const seller = getSellerUserByStoreId(order.storeId);
-    const nextState = getOrderStateModel(nextStatus);
-    const createdAt = formatNotificationTime();
-
-    const nextNotifications: OperationalNotification[] = [];
-
-    if (buyer) {
-      nextNotifications.push({
-        id: `${order.id}-buyer-${Date.now()}`,
-        orderId: order.id,
-        audienceUserId: buyer.id,
-        status: nextStatus,
-        title: `Pedido #${order.id} - ${nextState.customerLabel}`,
-        message: nextState.customerMessage,
-        channel: buyer.notificationsEnabled ? "push" : "in_app",
-        createdAt,
-      });
-    }
-
-    if (seller) {
-      nextNotifications.push({
-        id: `${order.id}-seller-${Date.now()}`,
-        orderId: order.id,
-        audienceUserId: seller.id,
-        status: nextStatus,
-        title: `Pedido #${order.id} - ${nextState.partnerLabel}`,
-        message: nextState.partnerMessage,
-        channel: seller.notificationsEnabled ? "push" : "in_app",
-        createdAt,
-      });
-    }
-
-    if (nextNotifications.length > 0) {
-      setNotifications((prev) => [...nextNotifications, ...prev].slice(0, 30));
-    }
-  }
-
   function handleAdvanceOrder(orderId: string, targetStatus?: OrderStatusCode) {
-    if (!currentUser || currentUser.role !== "seller" || !currentUser.sellerStoreId) return;
+    if (!currentUser) return;
 
-    const currentOrder = orders.find(
-      (order) => order.id === orderId && order.storeId === currentUser.sellerStoreId
-    );
-    if (!currentOrder) {
-      Alert.alert("Pedido nao encontrado", "Este pedido nao esta disponivel para sua loja.");
-      return;
+    try {
+      const result = localOrdersGateway.advanceOrder({
+        currentUser,
+        orders,
+        orderId,
+        targetStatus,
+      });
+
+      setOrders((prev) =>
+        prev.map((order) => (order.id === orderId ? result.updatedOrder : order))
+      );
+      appendNotifications(result.notifications);
+    } catch (error) {
+      if (error instanceof OrdersGatewayError) {
+        if (error.code === "order_not_found") {
+          Alert.alert("Pedido nao encontrado", error.message);
+          return;
+        }
+        if (error.code === "terminal_order" || error.code === "invalid_transition") {
+          Alert.alert("Transicao bloqueada", error.message);
+          return;
+        }
+        if (error.code === "seller_forbidden") {
+          Alert.alert("Acesso negado", error.message);
+          return;
+        }
+      }
+
+      Alert.alert("Falha operacional", "Nao foi possivel atualizar o pedido.");
     }
-
-    const nextStatus = targetStatus ?? getDefaultNextOrderStatus(currentOrder.status);
-    if (!nextStatus) {
-      Alert.alert("Transicao bloqueada", "Este pedido ja esta em estado terminal.");
-      return;
-    }
-
-    if (!isOrderTransitionAllowed(currentOrder.status, nextStatus)) {
-      Alert.alert("Transicao bloqueada", `Transicao invalida: ${currentOrder.status} -> ${nextStatus}.`);
-      return;
-    }
-
-    const updatedOrder: OrderItemRecord = { ...currentOrder, status: nextStatus };
-
-    setOrders((prev) => prev.map((order) => (order.id === orderId ? updatedOrder : order)));
-    createOperationalNotifications(updatedOrder, nextStatus);
   }
 
   function handleToggleSellerAvailability(storeId: string) {
@@ -690,6 +507,7 @@ export default function App() {
     return (
       <Profile
         currentUser={currentUser}
+        demoAccounts={demoAccounts}
         storesData={storesData}
         orders={orders}
         onRequestLogin={resetToLogin}
@@ -738,6 +556,7 @@ export default function App() {
     <Login
       onContinueAsGuest={resetToLanding}
       onSignIn={handleSignIn}
+      helperAccounts={demoAccounts}
       theme={theme}
       themeMode={themeMode}
       onToggleTheme={toggleTheme}

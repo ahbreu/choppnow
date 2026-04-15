@@ -7,9 +7,17 @@ import Logo from "../../assets/logo.png";
 import { createStyles } from "./styles";
 
 type LoginStep = "email" | "password";
+type LoginHelperAccount = {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+};
+
 type LoginProps = {
   onContinueAsGuest?: () => void;
   onSignIn?: (email: string, password: string) => boolean;
+  helperAccounts?: LoginHelperAccount[];
   theme: AppTheme;
   themeMode: ThemeMode;
   onToggleTheme?: () => void;
@@ -18,6 +26,7 @@ type LoginProps = {
 export default function Login({
   onContinueAsGuest,
   onSignIn,
+  helperAccounts = [],
   theme,
   themeMode,
   onToggleTheme,
@@ -101,8 +110,18 @@ export default function Login({
 
             <View style={style.helperCard}>
               <Text style={style.helperTitle}>Contas de teste</Text>
-              <Text style={style.helperText}>Comprador: pedro@choppnow.app / pedro123</Text>
-              <Text style={style.helperText}>Vendedor: apoena@choppnow.app / apoena123</Text>
+              {helperAccounts.length > 0 ? (
+                helperAccounts.map((account) => (
+                  <Text key={account.id} style={style.helperText}>
+                    {account.name}: {account.email} / {account.password}
+                  </Text>
+                ))
+              ) : (
+                <>
+                  <Text style={style.helperText}>Comprador: pedro@choppnow.app / pedro123</Text>
+                  <Text style={style.helperText}>Vendedor: apoena@choppnow.app / apoena123</Text>
+                </>
+              )}
             </View>
           </>
         ) : (

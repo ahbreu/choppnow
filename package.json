@@ -6,7 +6,11 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "./scripts/typecheck.sh",
+    "test:unit": "./scripts/test-unit.sh",
+    "export:web": "./scripts/export-web.sh",
+    "validate": "./scripts/validate-phase1.sh"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
