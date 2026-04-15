@@ -95,6 +95,35 @@ export function createStyles(theme: AppTheme) {
       color: theme.colors.textSecondary,
       fontSize: 14,
     },
+    runtimeChip: {
+      marginTop: 10,
+      alignSelf: "flex-start",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: theme.colors.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+    },
+    runtimeChipWarning: {
+      borderColor: theme.colors.primary,
+    },
+    runtimeChipError: {
+      borderColor: theme.colors.accent,
+    },
+    runtimeChipTitle: {
+      color: theme.colors.primary,
+      fontSize: 11,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    },
+    runtimeChipText: {
+      marginTop: 3,
+      color: theme.colors.textSecondary,
+      fontSize: 11,
+      fontWeight: "600",
+    },
     categoriesGrid: {
       marginTop: 22,
       flexDirection: "row",

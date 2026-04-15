@@ -7,6 +7,13 @@ export type AddOnOption = {
   price: number;
 };
 
+export type SelectedAddOn = {
+  id: string;
+  label: string;
+  price: number;
+  quantity: number;
+};
+
 export type CartItemAddOn = {
   id: string;
   label: string;
@@ -86,6 +93,21 @@ export function getCartSubtotal(cart: CartState) {
 
 export function getCartItemsCount(cart: CartState) {
   return cart.items.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+export const checkoutFees = {
+  delivery: 7.9,
+  service: 2.5,
+};
+
+export function getCheckoutTotals(subtotal: number, hasItems: boolean) {
+  const deliveryFee = hasItems ? checkoutFees.delivery : 0;
+  const serviceFee = hasItems ? checkoutFees.service : 0;
+  return {
+    deliveryFee,
+    serviceFee,
+    total: subtotal + deliveryFee + serviceFee,
+  };
 }
 
 export function getUpsellSuggestions(beers: BeerWithStore[], currentBeerId: string, storeId: string) {

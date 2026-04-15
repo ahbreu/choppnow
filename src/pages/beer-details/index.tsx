@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import ThemeToggle from "../../components/theme-toggle";
-import { AddOnOption, addOnOptions, formatCurrency } from "../../data/commerce";
+import { SelectedAddOn, addOnOptions, formatCurrency, parsePriceToNumber } from "../../data/commerce";
 import { BeerWithStore, getBitternessLabel } from "../../data/stores";
 import { UserProfile } from "../../data/users";
 import { AppTheme, ThemeMode } from "../../global/themes";
@@ -15,7 +15,8 @@ type BeerDetailsProps = {
   onOpenStore?: (storeId: string) => void;
   onOpenBeer?: (beerId: string) => void;
   onOpenCart?: () => void;
-  onAddToCart?: (beerId: string, quantity: number, addOns: AddOnOption[]) => void;
+  onAddToCart?: (beerId: string, quantity: number, addOns: SelectedAddOn[]) => void;
+  onQuickAddUpsell?: (beerId: string) => void;
   upsellBeers?: BeerWithStore[];
   cartItemsCount?: number;
   theme: AppTheme;
@@ -32,6 +33,7 @@ export default function BeerDetails({
   onOpenBeer,
   onOpenCart,
   onAddToCart,
+  onQuickAddUpsell,
   upsellBeers = [],
   cartItemsCount = 0,
   theme,
@@ -40,7 +42,12 @@ export default function BeerDetails({
 }: BeerDetailsProps) {
   const style = useMemo(() => createStyles(theme), [theme]);
   const [quantity, setQuantity] = useState(1);
-  const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
+  const [addOnQuantities, setAddOnQuantities] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    setQuantity(1);
+    setAddOnQuantities({});
+  }, [beer?.id]);
 
   if (!beer) {
     return (
@@ -56,9 +63,19 @@ export default function BeerDetails({
     );
   }
 
-  const selectedAddOns = addOnOptions.filter((option) => selectedAddOnIds.includes(option.id));
-  const selectedAddOnsTotal = selectedAddOns.reduce((sum, addOn) => sum + addOn.price, 0);
-  const basePrice = Number(beer.price.replace("R$", "").replace(/\./g, "").replace(",", ".").trim()) || 0;
+  const selectedAddOns: SelectedAddOn[] = addOnOptions
+    .map((option) => ({
+      id: option.id,
+      label: option.label,
+      price: option.price,
+      quantity: addOnQuantities[option.id] ?? 0,
+    }))
+    .filter((addOn) => addOn.quantity > 0);
+  const selectedAddOnsTotal = selectedAddOns.reduce(
+    (sum, addOn) => sum + addOn.price * addOn.quantity,
+    0
+  );
+  const basePrice = parsePriceToNumber(beer.price);
   const previewTotal = (basePrice + selectedAddOnsTotal) * quantity;
   const isBuyer = currentUser?.role === "buyer";
 
@@ -74,10 +91,19 @@ export default function BeerDetails({
       ? () => onAddToCart?.(beer.id, quantity, selectedAddOns)
       : () => onOpenStore?.(beer.storeId);
 
-  function toggleAddOn(addOnId: string) {
-    setSelectedAddOnIds((prev) =>
-      prev.includes(addOnId) ? prev.filter((id) => id !== addOnId) : [...prev, addOnId]
-    );
+  function updateAddOnQuantity(addOnId: string, delta: number) {
+    setAddOnQuantities((prev) => {
+      const currentQuantity = prev[addOnId] ?? 0;
+      const nextQuantity = Math.max(0, currentQuantity + delta);
+      if (nextQuantity === 0) {
+        const { [addOnId]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        [addOnId]: nextQuantity,
+      };
+    });
   }
 
   return (
@@ -137,19 +163,31 @@ export default function BeerDetails({
 
             <Text style={style.sectionTitle}>Add-ons</Text>
             {addOnOptions.map((addOn) => {
-              const isSelected = selectedAddOnIds.includes(addOn.id);
+              const addOnQuantity = addOnQuantities[addOn.id] ?? 0;
+              const isSelected = addOnQuantity > 0;
               return (
-                <TouchableOpacity
-                  key={addOn.id}
-                  style={[style.addOnCard, isSelected ? style.addOnCardSelected : null]}
-                  onPress={() => toggleAddOn(addOn.id)}
-                >
+                <View key={addOn.id} style={[style.addOnCard, isSelected ? style.addOnCardSelected : null]}>
                   <View style={style.addOnTopRow}>
                     <Text style={style.addOnLabel}>{addOn.label}</Text>
                     <Text style={style.addOnPrice}>{formatCurrency(addOn.price)}</Text>
                   </View>
                   <Text style={style.addOnDescription}>{addOn.description}</Text>
-                </TouchableOpacity>
+                  <View style={style.addOnControlRow}>
+                    <TouchableOpacity
+                      style={style.quantityButton}
+                      onPress={() => updateAddOnQuantity(addOn.id, -1)}
+                    >
+                      <Text style={style.quantityButtonText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={style.addOnQuantityValue}>{addOnQuantity}</Text>
+                    <TouchableOpacity
+                      style={style.quantityButton}
+                      onPress={() => updateAddOnQuantity(addOn.id, 1)}
+                    >
+                      <Text style={style.quantityButtonText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               );
             })}
 
@@ -164,13 +202,20 @@ export default function BeerDetails({
           <View style={style.infoCard}>
             <Text style={style.sectionTitle}>Combine com</Text>
             {upsellBeers.map((upsell) => (
-              <TouchableOpacity key={upsell.id} style={style.upsellCard} onPress={() => onOpenBeer?.(upsell.id)}>
-                <View style={style.upsellRow}>
-                  <Text style={style.upsellName}>{upsell.name}</Text>
-                  <Text style={style.upsellPrice}>{upsell.price}</Text>
-                </View>
-                <Text style={style.upsellMeta}>{upsell.style} - Avaliacao {upsell.rating.toFixed(1)}</Text>
-              </TouchableOpacity>
+              <View key={upsell.id} style={style.upsellCard}>
+                <TouchableOpacity onPress={() => onOpenBeer?.(upsell.id)}>
+                  <View style={style.upsellRow}>
+                    <Text style={style.upsellName}>{upsell.name}</Text>
+                    <Text style={style.upsellPrice}>{upsell.price}</Text>
+                  </View>
+                  <Text style={style.upsellMeta}>{upsell.style} - Avaliacao {upsell.rating.toFixed(1)}</Text>
+                </TouchableOpacity>
+                {isBuyer ? (
+                  <TouchableOpacity style={style.upsellAddButton} onPress={() => onQuickAddUpsell?.(upsell.id)}>
+                    <Text style={style.upsellAddButtonText}>Adicionar 1x</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             ))}
           </View>
         ) : null}

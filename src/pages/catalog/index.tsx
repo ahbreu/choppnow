@@ -1,12 +1,15 @@
-import React, { useMemo, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { AppState, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import {
-  catalogFilterPresets,
-  homeCampaigns,
+  CatalogFilterPreset,
+  DiscoveryCampaign,
 } from "../../data/discovery";
 import ThemeToggle from "../../components/theme-toggle";
 import { StoreItem, getAllBeers } from "../../data/stores";
 import { AppTheme, ThemeMode } from "../../global/themes";
+import { CatalogRuntimeData, CatalogSyncStatus, getCatalogSyncStatus, getLastCatalogRuntimeSource } from "../../services/catalog/repository";
+import { getCatalogStatusRefreshIntervalMs, shouldRefreshCatalogRuntime } from "../../services/catalog/runtime-refresh";
+import { getCatalogRuntimeSourceLabel, getCatalogSyncSummary } from "../../services/catalog/status-copy";
 import { createStyles } from "./styles";
 
 export type CatalogMode = "stores" | "beers";
@@ -18,6 +21,8 @@ type CatalogProps = {
   onOpenStore?: (storeId: string) => void;
   onOpenBeer?: (beerId: string) => void;
   onRequestLogin?: () => void;
+  campaigns: DiscoveryCampaign[];
+  filterPresets: CatalogFilterPreset[];
   theme: AppTheme;
   themeMode: ThemeMode;
   onToggleTheme?: () => void;
@@ -30,6 +35,8 @@ export default function Catalog({
   onOpenStore,
   onOpenBeer,
   onRequestLogin,
+  campaigns,
+  filterPresets,
   theme,
   themeMode,
   onToggleTheme,
@@ -38,16 +45,76 @@ export default function Catalog({
   const isStoresMode = mode === "stores";
   const style = useMemo(() => createStyles(theme), [theme]);
   const [selectedFilterId, setSelectedFilterId] = useState<string | null>(null);
+  const [catalogSource, setCatalogSource] = useState<CatalogRuntimeData["source"] | null>(null);
+  const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null);
+  const [isStatusRefreshing, setIsStatusRefreshing] = useState(false);
+  const statusRefreshInFlightRef = React.useRef(false);
+  const appStateRef = React.useRef(AppState.currentState);
+
+  async function refreshCatalogRuntimeStatus() {
+    if (statusRefreshInFlightRef.current) return;
+    statusRefreshInFlightRef.current = true;
+    setIsStatusRefreshing(true);
+    try {
+      const [source, status] = await Promise.all([
+        getLastCatalogRuntimeSource(),
+        getCatalogSyncStatus(),
+      ]);
+      setCatalogSource(source);
+      setSyncStatus(status);
+    } catch {
+      // Keep discovery flow stable if runtime metadata is unavailable.
+    } finally {
+      statusRefreshInFlightRef.current = false;
+      setIsStatusRefreshing(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshCatalogRuntimeStatus();
+    const appStateSubscription = AppState.addEventListener("change", (nextState) => {
+      appStateRef.current = nextState;
+      if (shouldRefreshCatalogRuntime(nextState)) {
+        refreshCatalogRuntimeStatus();
+      }
+    });
+    const intervalId = setInterval(() => {
+      if (!shouldRefreshCatalogRuntime(appStateRef.current)) return;
+      refreshCatalogRuntimeStatus();
+    }, getCatalogStatusRefreshIntervalMs());
+
+    return () => {
+      appStateSubscription.remove();
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const availableFilters = useMemo(
-    () => catalogFilterPresets.filter((item) => item.mode === mode),
-    [mode]
+    () => filterPresets.filter((item) => item.mode === mode),
+    [filterPresets, mode]
   );
 
   const selectedFilter = useMemo(
     () => availableFilters.find((item) => item.id === selectedFilterId),
     [availableFilters, selectedFilterId]
   );
+
+  useEffect(() => {
+    if (!selectedFilterId) return;
+    const stillAvailable = availableFilters.some((item) => item.id === selectedFilterId);
+    if (!stillAvailable) {
+      setSelectedFilterId(null);
+    }
+  }, [availableFilters, selectedFilterId]);
+
+  const visibleCampaigns = useMemo(() => {
+    const campaignByMode = campaigns.filter(
+      (campaign) =>
+        campaign.targetType !== "catalog" || !campaign.catalogMode || campaign.catalogMode === mode
+    );
+    if (campaignByMode.length > 0) return campaignByMode.slice(0, 2);
+    return campaigns.slice(0, 2);
+  }, [campaigns, mode]);
 
   const visibleStores = useMemo(() => {
     if (!selectedFilter?.criteria) return storesData;
@@ -90,6 +157,15 @@ export default function Catalog({
     });
   }, [allBeers, selectedFilter]);
 
+  const sourceLabel = useMemo(() => getCatalogRuntimeSourceLabel(catalogSource), [catalogSource]);
+  const syncSummary = useMemo(
+    () =>
+      isStatusRefreshing
+        ? "Atualizando status..."
+        : getCatalogSyncSummary(syncStatus, "detailed").text,
+    [isStatusRefreshing, syncStatus]
+  );
+
   return (
     <View style={style.container}>
       <ThemeToggle theme={theme} mode={themeMode} onToggle={onToggleTheme} />
@@ -109,6 +185,11 @@ export default function Catalog({
             ? "Colecoes de cervejarias com filtros por bairro, nota e campanha."
             : "Catalogo vivo com rotulos por estilo, amargor, faixa de preco e nota."}
         </Text>
+
+        <View style={style.runtimeStatusCard}>
+          <Text style={style.runtimeStatusTitle}>Fonte do catalogo: {sourceLabel}</Text>
+          <Text style={style.runtimeStatusText}>{syncSummary}</Text>
+        </View>
 
         <View style={style.filterRail}>
           <TouchableOpacity
@@ -149,7 +230,7 @@ export default function Catalog({
         </View>
 
         <View style={style.campaignStrip}>
-          {homeCampaigns.slice(0, 2).map((campaign) => (
+          {visibleCampaigns.map((campaign) => (
             <View key={campaign.id} style={style.campaignTag}>
               <Text style={style.campaignTagTitle}>{campaign.title}</Text>
             </View>

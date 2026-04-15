@@ -178,6 +178,20 @@ export function createStyles(theme: AppTheme) {
       fontSize: 12,
       lineHeight: 16,
     },
+    addOnControlRow: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 10,
+    },
+    addOnQuantityValue: {
+      minWidth: 20,
+      textAlign: "center",
+      color: theme.colors.textPrimary,
+      fontWeight: "700",
+      fontSize: 14,
+    },
     previewTotalRow: {
       marginTop: 12,
       flexDirection: "row",
@@ -222,6 +236,21 @@ export function createStyles(theme: AppTheme) {
       marginTop: 4,
       color: theme.colors.textSecondary,
       fontSize: 12,
+    },
+    upsellAddButton: {
+      marginTop: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.surface,
+      paddingVertical: 8,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    upsellAddButtonText: {
+      color: theme.colors.primary,
+      fontSize: 13,
+      fontWeight: "700",
     },
     primaryButton: {
       marginTop: 18,

@@ -1,7 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import ThemeToggle from "../../components/theme-toggle";
-import { CartState, CheckoutDraft, formatCurrency, getCartSubtotal } from "../../data/commerce";
+import {
+  CartState,
+  CheckoutDraft,
+  formatCurrency,
+  getCartSubtotal,
+  getCheckoutTotals,
+} from "../../data/commerce";
 import { UserProfile } from "../../data/users";
 import { AppTheme, ThemeMode } from "../../global/themes";
 import { createStyles } from "./styles";
@@ -14,7 +20,7 @@ type CheckoutProps = {
   cart: CartState;
   onBack?: () => void;
   onRequestLogin?: () => void;
-  onPlaceOrder?: (draft: CheckoutDraft) => void;
+  onPlaceOrder?: (draft: CheckoutDraft) => Promise<void> | void;
 };
 
 export default function Checkout({
@@ -31,19 +37,25 @@ export default function Checkout({
   const [paymentMethod, setPaymentMethod] = useState<CheckoutDraft["paymentMethod"]>("pix");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [couponCode, setCouponCode] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subtotal = getCartSubtotal(cart);
-  const deliveryFee = cart.items.length > 0 ? 7.9 : 0;
-  const serviceFee = cart.items.length > 0 ? 2.5 : 0;
-  const total = subtotal + deliveryFee + serviceFee;
+  const { deliveryFee, serviceFee, total } = getCheckoutTotals(subtotal, cart.items.length > 0);
   const isBuyer = currentUser?.role === "buyer";
 
-  function handleConfirmOrder() {
-    onPlaceOrder?.({
-      paymentMethod,
-      deliveryNotes: deliveryNotes.trim(),
-      couponCode: couponCode.trim(),
-    });
+  async function handleConfirmOrder() {
+    if (!onPlaceOrder || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await onPlaceOrder({
+        paymentMethod,
+        deliveryNotes: deliveryNotes.trim(),
+        couponCode: couponCode.trim(),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -144,8 +156,14 @@ export default function Checkout({
               </View>
             </View>
 
-            <TouchableOpacity style={style.ctaButton} onPress={handleConfirmOrder}>
-              <Text style={style.ctaButtonText}>Confirmar pedido</Text>
+            <TouchableOpacity
+              style={[style.ctaButton, isSubmitting ? style.ctaButtonDisabled : null]}
+              onPress={handleConfirmOrder}
+              disabled={isSubmitting}
+            >
+              <Text style={style.ctaButtonText}>
+                {isSubmitting ? "Enviando pedido..." : "Confirmar pedido"}
+              </Text>
             </TouchableOpacity>
           </>
         )}

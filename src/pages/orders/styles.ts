@@ -197,6 +197,63 @@ export function createStyles(theme: AppTheme) {
       fontWeight: "800",
       fontSize: 13,
     },
+    cancelButton: {
+      marginTop: 8,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.error,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cancelButtonText: {
+      color: theme.colors.error,
+      fontWeight: "700",
+      fontSize: 13,
+    },
+    consoleHint: {
+      marginTop: 10,
+      color: theme.colors.textMuted,
+      fontSize: 12,
+      lineHeight: 17,
+    },
+    notificationCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: 12,
+      marginBottom: 8,
+    },
+    notificationHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    notificationTitle: {
+      flex: 1,
+      color: theme.colors.textPrimary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    channelBadge: {
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    channelPush: {
+      backgroundColor: theme.colors.success,
+    },
+    channelInApp: {
+      backgroundColor: theme.colors.warning,
+    },
+    channelBadgeText: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 11,
+      fontWeight: "700",
+    },
     emptyCard: {
       marginTop: 20,
       backgroundColor: theme.colors.surface,

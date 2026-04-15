@@ -1,7 +1,13 @@
 import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import ThemeToggle from "../../components/theme-toggle";
-import { CartState, formatCurrency, getCartItemLineTotal, getCartSubtotal } from "../../data/commerce";
+import {
+  CartState,
+  formatCurrency,
+  getCartItemLineTotal,
+  getCartSubtotal,
+  getCheckoutTotals,
+} from "../../data/commerce";
 import { UserProfile } from "../../data/users";
 import { AppTheme, ThemeMode } from "../../global/themes";
 import { createStyles } from "./styles";
@@ -37,9 +43,7 @@ export default function Cart({
 }: CartProps) {
   const style = useMemo(() => createStyles(theme), [theme]);
   const subtotal = getCartSubtotal(cart);
-  const deliveryFee = cart.items.length > 0 ? 7.9 : 0;
-  const serviceFee = cart.items.length > 0 ? 2.5 : 0;
-  const total = subtotal + deliveryFee + serviceFee;
+  const { deliveryFee, serviceFee, total } = getCheckoutTotals(subtotal, cart.items.length > 0);
 
   const isBuyer = currentUser?.role === "buyer";
 

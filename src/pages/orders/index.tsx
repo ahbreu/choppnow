@@ -3,9 +3,10 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import AppBottomNav from "../../components/app-bottom-nav";
 import ThemeToggle from "../../components/theme-toggle";
 import {
-  canAdvanceOrderStatus,
   getOrderStateModel,
   getOrderTimeline,
+  isOrderTransitionAllowed,
+  OperationalNotification,
   OrderItemRecord,
   OrderStatusCode,
   isActiveOrder,
@@ -22,8 +23,9 @@ type OrdersProps = {
   currentUser: UserProfile | null;
   orders: OrderItemRecord[];
   storesData: StoreItem[];
+  notifications?: OperationalNotification[];
   sellerAvailability?: Record<string, boolean>;
-  onAdvanceOrder?: (orderId: string) => void;
+  onAdvanceOrder?: (orderId: string, targetStatus?: OrderStatusCode) => void;
   onToggleSellerAvailability?: (storeId: string) => void;
   onOpenHome?: () => void;
   onOpenSearch?: () => void;
@@ -38,6 +40,7 @@ export default function Orders({
   currentUser,
   orders,
   storesData,
+  notifications,
   sellerAvailability,
   onAdvanceOrder,
   onToggleSellerAvailability,
@@ -59,6 +62,10 @@ export default function Orders({
 
   const activeOrders = visibleOrders.filter((order) => isActiveOrder(order.status));
   const pastOrders = visibleOrders.filter((order) => !isActiveOrder(order.status));
+  const visibleNotifications = useMemo(() => {
+    if (!currentUser) return [];
+    return (notifications ?? []).filter((notification) => notification.audienceUserId === currentUser.id);
+  }, [currentUser, notifications]);
 
   const sellerStore =
     currentUser?.role === "seller" && currentUser.sellerStoreId
@@ -140,6 +147,8 @@ export default function Orders({
   function renderOrderCard(order: OrderItemRecord, role: "buyer" | "seller") {
     const store = getStoreById(storesData, order.storeId);
     const state = getOrderStateModel(order.status);
+    const nextStatus = state.next;
+    const canCancel = isOrderTransitionAllowed(order.status, "cancelled");
     const statusStyle = getStatusStyles(order.status);
     const timeline = getOrderTimeline(order.status);
 
@@ -176,9 +185,16 @@ export default function Orders({
         </View>
         <Text style={style.timelineLabel}>{state.stepLabel} no fluxo operacional</Text>
 
-        {role === "seller" && canAdvanceOrderStatus(order.status) ? (
-          <TouchableOpacity style={style.advanceButton} onPress={() => onAdvanceOrder?.(order.id)}>
-            <Text style={style.advanceButtonText}>Avancar para proximo status</Text>
+        {role === "seller" && nextStatus ? (
+          <TouchableOpacity style={style.advanceButton} onPress={() => onAdvanceOrder?.(order.id, nextStatus)}>
+            <Text style={style.advanceButtonText}>
+              Avancar para {getOrderStateModel(nextStatus).partnerLabel}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+        {role === "seller" && canCancel ? (
+          <TouchableOpacity style={style.cancelButton} onPress={() => onAdvanceOrder?.(order.id, "cancelled")}>
+            <Text style={style.cancelButtonText}>Cancelar pedido</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -243,8 +259,40 @@ export default function Orders({
                     </View>
                   ))}
                 </View>
+                <Text style={style.consoleHint}>
+                  {sellerIsOnline
+                    ? "Novos pedidos entram automaticamente em 'Novo pedido'."
+                    : "Loja pausada: novos pedidos sao bloqueados no checkout."}
+                </Text>
               </View>
             ) : null}
+
+            <Text style={style.sectionTitle}>Atualizacoes operacionais</Text>
+            {visibleNotifications.length === 0 ? (
+              <View style={style.emptyCard}>
+                <Text style={style.emptyText}>Sem notificacoes recentes.</Text>
+              </View>
+            ) : (
+              visibleNotifications.slice(0, 6).map((notification) => (
+                <View key={notification.id} style={style.notificationCard}>
+                  <View style={style.notificationHeader}>
+                    <Text style={style.notificationTitle}>{notification.title}</Text>
+                    <View
+                      style={[
+                        style.channelBadge,
+                        notification.channel === "push" ? style.channelPush : style.channelInApp,
+                      ]}
+                    >
+                      <Text style={style.channelBadgeText}>
+                        {notification.channel === "push" ? "Push" : "Fallback"}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={style.cardText}>{notification.message}</Text>
+                  <Text style={style.timelineLabel}>{notification.createdAt}</Text>
+                </View>
+              ))
+            )}
 
             <Text style={style.sectionTitle}>Ativos</Text>
             {activeOrders.length === 0 ? (

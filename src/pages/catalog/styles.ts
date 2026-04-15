@@ -51,10 +51,32 @@ export function createStyles(theme: AppTheme) {
     },
     pageSubtitle: {
       marginTop: 6,
-      marginBottom: 14,
+      marginBottom: 10,
       color: palette.textSecondary,
       fontSize: 14,
       lineHeight: 20,
+    },
+    runtimeStatusCard: {
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.cardStrong,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 12,
+    },
+    runtimeStatusTitle: {
+      color: palette.yellow,
+      fontSize: 12,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+    },
+    runtimeStatusText: {
+      marginTop: 6,
+      color: palette.textSecondary,
+      fontSize: 12,
+      lineHeight: 17,
     },
     filterRail: {
       flexDirection: "row",

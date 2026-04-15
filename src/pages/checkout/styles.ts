@@ -146,6 +146,9 @@ export function createStyles(theme: AppTheme) {
       alignItems: "center",
       justifyContent: "center",
     },
+    ctaButtonDisabled: {
+      opacity: 0.75,
+    },
     ctaButtonText: {
       color: theme.colors.textOnPrimary,
       fontWeight: "700",

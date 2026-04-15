@@ -4,7 +4,12 @@ export type OrderStatusCode =
   | "preparing"
   | "ready_for_dispatch"
   | "out_for_delivery"
-  | "delivered";
+  | "delivered"
+  | "cancelled";
+
+export type OrderActorRole = "buyer" | "seller" | "system";
+
+export type NotificationChannel = "push" | "in_app";
 
 export type OrderStateModel = {
   code: OrderStatusCode;
@@ -84,6 +89,16 @@ const ORDER_STATE_MODEL: Record<OrderStatusCode, OrderStateModel> = {
     stepIndex: 5,
     isTerminal: true,
   },
+  cancelled: {
+    code: "cancelled",
+    customerLabel: "Cancelado",
+    partnerLabel: "Cancelado",
+    customerMessage: "Pedido cancelado pela operacao da loja.",
+    partnerMessage: "Pedido cancelado e retirado da fila ativa.",
+    stepLabel: "Cancelado",
+    stepIndex: 1,
+    isTerminal: true,
+  },
 };
 
 const ORDER_TIMELINE = [
@@ -94,6 +109,16 @@ const ORDER_TIMELINE = [
   "Saiu para entrega",
   "Entregue",
 ] as const;
+
+const ORDER_TRANSITIONS: Record<OrderStatusCode, OrderStatusCode[]> = {
+  placed: ["confirmed", "cancelled"],
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["ready_for_dispatch", "cancelled"],
+  ready_for_dispatch: ["out_for_delivery"],
+  out_for_delivery: ["delivered"],
+  delivered: [],
+  cancelled: [],
+};
 
 export type OrderTimelineStep = {
   label: string;
@@ -115,6 +140,17 @@ export type OrderItemRecord = {
   createdAt: string;
   slaMinutes: number;
   status: OrderStatusCode;
+};
+
+export type OperationalNotification = {
+  id: string;
+  orderId: string;
+  audienceUserId: string;
+  status: OrderStatusCode;
+  title: string;
+  message: string;
+  channel: NotificationChannel;
+  createdAt: string;
 };
 
 export const initialOrders: OrderItemRecord[] = [
@@ -176,4 +212,16 @@ export function canAdvanceOrderStatus(status: OrderStatusCode) {
 
 export function advanceOrderStatus(status: OrderStatusCode): OrderStatusCode {
   return ORDER_STATE_MODEL[status].next ?? status;
+}
+
+export function getAllowedOrderTransitions(status: OrderStatusCode) {
+  return ORDER_TRANSITIONS[status];
+}
+
+export function isOrderTransitionAllowed(current: OrderStatusCode, next: OrderStatusCode) {
+  return ORDER_TRANSITIONS[current].includes(next);
+}
+
+export function getDefaultNextOrderStatus(status: OrderStatusCode) {
+  return ORDER_STATE_MODEL[status].next;
 }
