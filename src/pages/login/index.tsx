@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 import ThemeToggle from "../../components/theme-toggle";
 import { AppTheme, ThemeMode } from "../../global/themes";
-import { useGoogleRequest } from "../../services/auth/google";
 import Logo from "../../assets/logo.png";
 import { createStyles } from "./styles";
 
@@ -17,7 +16,11 @@ type LoginHelperAccount = {
 type LoginProps = {
   onContinueAsGuest?: () => void;
   onSignIn?: (email: string, password: string) => boolean;
+  onSignInWithGoogle?: () => void;
   helperAccounts?: LoginHelperAccount[];
+  canSignInWithGoogle?: boolean;
+  isGoogleLoading?: boolean;
+  googleStatusMessage?: string | null;
   theme: AppTheme;
   themeMode: ThemeMode;
   onToggleTheme?: () => void;
@@ -26,23 +29,20 @@ type LoginProps = {
 export default function Login({
   onContinueAsGuest,
   onSignIn,
+  onSignInWithGoogle,
   helperAccounts = [],
+  canSignInWithGoogle = false,
+  isGoogleLoading = false,
+  googleStatusMessage = null,
   theme,
   themeMode,
   onToggleTheme,
 }: LoginProps) {
-  const { request, response, promptAsync } = useGoogleRequest();
   const [step, setStep] = useState<LoginStep>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const style = useMemo(() => createStyles(theme), [theme]);
-
-  useEffect(() => {
-    if (response?.type === "success") {
-      console.log("Google auth success", response);
-    }
-  }, [response]);
 
   function handleContinueWithEmail() {
     setError("");
@@ -60,12 +60,23 @@ export default function Login({
     onContinueAsGuest?.();
   }
 
+  function handleGoogleSignIn() {
+    setError("");
+    onSignInWithGoogle?.();
+  }
+
   function handleSignIn() {
     const signedIn = onSignIn?.(email, password);
     if (!signedIn) {
       setError("Credenciais invalidas. Use uma das contas de teste.");
     }
   }
+
+  const googleButtonLabel = isGoogleLoading
+    ? "Conectando com Google..."
+    : canSignInWithGoogle
+      ? "Continuar com Google"
+      : "Google indisponivel";
 
   return (
     <View style={style.container}>
@@ -98,11 +109,13 @@ export default function Login({
 
             <TouchableOpacity
               style={style.secondaryButton}
-              disabled={!request}
-              onPress={() => promptAsync()}
+              disabled={!canSignInWithGoogle || isGoogleLoading}
+              onPress={handleGoogleSignIn}
             >
-              <Text style={style.secondaryButtonText}>Continuar com Google</Text>
+              <Text style={style.secondaryButtonText}>{googleButtonLabel}</Text>
             </TouchableOpacity>
+
+            {googleStatusMessage ? <Text style={style.helperText}>{googleStatusMessage}</Text> : null}
 
             <TouchableOpacity style={style.guestButton} onPress={handleContinueAsGuest}>
               <Text style={style.guestButtonText}>Continuar sem login</Text>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import {
   initialOrders,
@@ -7,7 +7,6 @@ import {
 } from "./src/data/orders";
 import { SellerProductDraft } from "./src/pages/profile";
 import { getAllBeers, getBeerById, getStoreById, initialStores } from "./src/data/stores";
-import { UserProfile } from "./src/data/users";
 import { getTheme } from "./src/global/themes";
 import BeerDetails from "./src/pages/beer-details";
 import Cart from "./src/pages/cart";
@@ -31,7 +30,7 @@ import {
   flushInventorySyncQueueWithRetry,
   queueInventoryAdjustment,
 } from "./src/services/catalog/repository";
-import { demoAuthGateway } from "./src/services/auth/demo";
+import { useAuthSession } from "./src/hooks/useAuthSession";
 import { useBuyerCartPersistence } from "./src/hooks/useBuyerCartPersistence";
 import { useCatalogRuntime } from "./src/hooks/useCatalogRuntime";
 import { useThemePreference } from "./src/hooks/useThemePreference";
@@ -62,19 +61,38 @@ export default function App() {
   const [sellerAvailability, setSellerAvailability] = useState<Record<string, boolean>>(
     INITIAL_SELLER_AVAILABILITY
   );
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const {
+    currentUser,
+    demoAccounts,
+    googleStatusMessage,
+    isGoogleLoading,
+    signInWithDemoAccount,
+    signInWithEmail,
+    signInWithGoogle,
+    signOut,
+    canSignInWithGoogle,
+  } = useAuthSession();
 
   const currentRoute = routes[routes.length - 1];
   const theme = useMemo(() => getTheme(themeMode), [themeMode]);
   const allBeers = useMemo(() => getAllBeers(storesData), [storesData]);
   const cartItemsCount = useMemo(() => getCartItemsCount(cart), [cart]);
-  const demoAccounts = useMemo(() => demoAuthGateway.listDemoAccounts(), []);
 
   useBuyerCartPersistence({
     currentUser,
     cart,
     setCart,
   });
+
+  useEffect(() => {
+    setCart(initialCartState);
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (currentRoute.name === "login" && currentUser) {
+      setRootRoute({ name: "landing" });
+    }
+  }, [currentRoute.name, currentUser]);
 
   const selectedStore = useMemo(() => {
     if (currentRoute.name !== "store-details") return undefined;
@@ -141,27 +159,26 @@ export default function App() {
   }
 
   function handleSignIn(email: string, password: string) {
-    const user = demoAuthGateway.signInWithEmail(email, password);
-    if (!user) return false;
+    const signedIn = signInWithEmail(email, password);
+    if (!signedIn) return false;
 
-    setCurrentUser(user);
-    setCart(initialCartState);
     setRootRoute({ name: "landing" });
     return true;
   }
 
   function handleUseDemoAccount(userId: string) {
-    const user = demoAuthGateway.getUserById(userId);
-    if (!user) return;
+    const signedIn = signInWithDemoAccount(userId);
+    if (!signedIn) return;
 
-    setCurrentUser(user);
-    setCart(initialCartState);
     setRootRoute({ name: "profile" });
   }
 
+  async function handleGoogleSignIn() {
+    await signInWithGoogle();
+  }
+
   function handleSignOut() {
-    setCurrentUser(null);
-    setCart(initialCartState);
+    signOut();
     setRootRoute({ name: "login" });
   }
 
@@ -556,7 +573,11 @@ export default function App() {
     <Login
       onContinueAsGuest={resetToLanding}
       onSignIn={handleSignIn}
+      onSignInWithGoogle={handleGoogleSignIn}
       helperAccounts={demoAccounts}
+      canSignInWithGoogle={canSignInWithGoogle}
+      isGoogleLoading={isGoogleLoading}
+      googleStatusMessage={googleStatusMessage}
       theme={theme}
       themeMode={themeMode}
       onToggleTheme={toggleTheme}

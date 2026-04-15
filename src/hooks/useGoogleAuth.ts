@@ -1,67 +1,78 @@
-// src/hooks/useGoogleAuth.ts
 import { useEffect, useState } from "react";
+import { GoogleIdentity } from "../services/auth/gateway";
 import { useGoogleRequest } from "../services/auth/google";
-import { saveItem, removeItem, getItem } from "../utils/storage";
-
-type GoogleUser = {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-};
-
-const STORAGE_KEY = "@choppnow:user";
 
 export function useGoogleAuth() {
-  const { request, response, promptAsync } = useGoogleRequest();
-  const [user, setUser] = useState<GoogleUser | null>(null);
+  const { request, response, promptAsync, isConfigured } = useGoogleRequest();
+  const [user, setUser] = useState<GoogleIdentity | null>(null);
   const [loading, setLoading] = useState(false);
-
-  async function loadSession() {
-    const saved = await getItem<GoogleUser>(STORAGE_KEY);
-    if (saved) setUser(saved);
-  }
+  const [error, setError] = useState<string | null>(null);
 
   async function signIn() {
+    if (!request) {
+      setError("Google auth ainda nao esta pronto neste device.");
+      return false;
+    }
+    if (!isConfigured) {
+      setError("Google OAuth indisponivel neste build. Configure EXPO_PUBLIC_GOOGLE_CLIENT_ID.");
+      return false;
+    }
+
     setLoading(true);
     try {
-      await promptAsync(); // <-- sem useProxy
+      setError(null);
+      await promptAsync();
+      return true;
+    } catch {
+      setError("Nao foi possivel iniciar o login com Google.");
+      return false;
     } finally {
       setLoading(false);
     }
   }
 
-  async function signOut() {
+  function clearUser() {
     setUser(null);
-    await removeItem(STORAGE_KEY);
+    setError(null);
   }
 
   useEffect(() => {
-    loadSession();
-  }, []);
-
-  useEffect(() => {
     async function handleResponse() {
-      if (response?.type !== "success") return;
+      if (!response) return;
+      if (response.type === "cancel" || response.type === "dismiss") return;
+      if (response.type !== "success") {
+        setError("Falha no login com Google.");
+        return;
+      }
 
       const accessToken = response.authentication?.accessToken;
-      if (!accessToken) return;
+      if (!accessToken) {
+        setError("Google nao retornou um token valido.");
+        return;
+      }
 
-      const profileRes = await fetch("https://www.googleapis.com/userinfo/v2/me", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      try {
+        const profileRes = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-      const profile = await profileRes.json();
+        if (!profileRes.ok) {
+          throw new Error("google-profile-fetch-failed");
+        }
 
-      const mapped: GoogleUser = {
-        id: profile.id,
-        email: profile.email,
-        name: profile.name,
-        picture: profile.picture,
-      };
+        const profile = await profileRes.json();
+        const mapped: GoogleIdentity = {
+          id: String(profile.id),
+          email: String(profile.email),
+          name: String(profile.name),
+          picture: profile.picture ? String(profile.picture) : undefined,
+        };
 
-      setUser(mapped);
-      await saveItem(STORAGE_KEY, mapped);
+        setUser(mapped);
+        setError(null);
+      } catch {
+        setError("Nao foi possivel carregar seu perfil do Google.");
+      }
     }
 
     handleResponse();
@@ -69,9 +80,11 @@ export function useGoogleAuth() {
 
   return {
     request,
+    isConfigured,
     user,
     loading,
+    error,
     signIn,
-    signOut,
+    clearUser,
   };
 }

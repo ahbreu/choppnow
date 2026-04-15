@@ -10,6 +10,10 @@ const WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
 const FALLBACK_CLIENT_ID = "missing-client-id.apps.googleusercontent.com";
 
+export function isGoogleAuthConfigured() {
+  return Boolean(GOOGLE_CLIENT_ID || WEB_CLIENT_ID || IOS_CLIENT_ID || ANDROID_CLIENT_ID);
+}
+
 export function useGoogleRequest() {
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId:
@@ -24,5 +28,5 @@ export function useGoogleRequest() {
     scopes: ["profile", "email"],
   });
 
-  return { request, response, promptAsync };
+  return { request, response, promptAsync, isConfigured: isGoogleAuthConfigured() };
 }

@@ -1,6 +1,6 @@
 # STATUS
 
-Snapshot do estado atual do `choppnow` em 2026-04-14.
+Snapshot do estado atual do `choppnow` em 2026-04-15.
 
 Para o fluxo de retomada em modo `Codex-only`, veja `PLAYBOOK.md`.
 
@@ -71,9 +71,11 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 ### Autenticacao
 
-- login por e-mail ainda usa usuarios demo hardcoded
-- Google OAuth nao esta conectado ao estado principal do app
-- nao existe sessao remota real
+- sessao local agora e unificada e persistida entre reinicios
+- login por e-mail continua usando usuarios demo, mas isolado como provedor de teste
+- Google OAuth agora conversa com o estado principal do app quando configurado no ambiente
+- contas Google entram como comprador local do app ate existir backend real
+- nao existe sessao remota real nem sincronizacao de perfil com backend
 
 ### Checkout e pedidos
 
@@ -81,6 +83,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - nao existe gateway real de pagamento
 - endereco e cupom ainda sao placeholders
 - pedidos e notificacoes nao estao persistidos em backend
+- notificacoes do comprador continuam mais confiaveis no fluxo demo do que no fluxo Google
 
 ### Operacao do parceiro
 
@@ -89,11 +92,11 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 ### Qualidade e manutencao
 
-- `App.tsx` concentrou muita responsabilidade e precisa ser quebrado em modulos quando a retomada comecar
+- `App.tsx` foi enxugado na Fase 1, mas ainda concentra regras demais
 - `src/services/catalog/repository.ts` concentra contrato, parse, cache, sync e status em um unico arquivo grande
-- nao existe suite de testes automatizados
-- `package.json` ainda nao expoe scripts de `typecheck`, `lint` ou `test`
-- `README.md` estava atrasado em relacao ao produto e foi atualizado neste snapshot
+- existe uma base inicial de testes unitarios e scripts de validacao para `typecheck`, testes e export web
+- ainda nao existe lint nem cobertura de smoke end-to-end
+- `README.md`, `STATUS.md` e `PLAYBOOK.md` viraram a documentacao viva do repo
 
 ## Avaliacao da estrutura
 
@@ -102,8 +105,10 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - estrutura por `pages`, `services`, `data`, `components`, `utils`
 - separacao inicial entre UI, seeds e servicos
 - camada de catalogo ja preparada para integracao real
+- camada de auth agora separa sessao, provedor demo e provedor Google
 - fluxo de comprador e parceiro visiveis o suficiente para orientar backlog
 - uso de TypeScript estrito
+- scripts de validacao repetiveis para retomar o app com pouco contexto
 
 ### O que precisa melhorar
 
@@ -111,12 +116,13 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - separar `repository.ts` em modulos menores
 - formalizar contratos do backend em arquivos dedicados
 - substituir dados demo e placeholders por adaptadores reais
-- criar scripts e testes minimos de seguranca para retomada
+- ampliar os testes para cobrir fluxos completos de compra e autenticacao
 
 ## Verificacoes executadas neste snapshot
 
-- typecheck: `tsc --noEmit` concluido com sucesso
-- export web: `expo export --platform web` concluido com sucesso
+- typecheck: script dedicado concluido com sucesso
+- testes unitarios: fluxo base concluido com sucesso
+- export web: script dedicado concluido com sucesso
 
 ## Leitura honesta do momento do projeto
 
@@ -129,7 +135,7 @@ O bloqueio principal nao e apenas "tokens do Codex". Os limites reais sao:
 - falta de documentacao fiel ao estado atual
 - concentracao de logica em poucos arquivos grandes
 - ausencia de backend real conectado nos fluxos criticos
-- ausencia de testes e scripts de validacao rapida
+- ausencia de persistencia remota para auth, pedidos e operacao
 
 ## Proxima abordagem recomendada
 
