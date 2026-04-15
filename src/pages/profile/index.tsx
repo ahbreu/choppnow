@@ -3,9 +3,11 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-nativ
 import AppBottomNav from "../../components/app-bottom-nav";
 import ThemeToggle from "../../components/theme-toggle";
 import { OrderItemRecord } from "../../data/orders";
-import { StoreItem, getAllBeers, getStoreById } from "../../data/stores";
+import { StoreItem, getAllBeers } from "../../data/stores";
 import { UserProfile } from "../../data/users";
 import { AppTheme, ThemeMode } from "../../global/themes";
+import { CatalogBeerRuntimeRecord } from "../../services/catalog/local-products";
+import { CatalogStoreRecord } from "../../services/catalog/repository";
 import { createStyles } from "./styles";
 
 export type SellerProductDraft = {
@@ -15,6 +17,7 @@ export type SellerProductDraft = {
   price: string;
   description: string;
   ibu: number;
+  initialUnits: number;
 };
 
 type ProfileProps = {
@@ -25,12 +28,15 @@ type ProfileProps = {
   demoAccounts?: UserProfile[];
   storesData: StoreItem[];
   orders: OrderItemRecord[];
+  sellerStore?: CatalogStoreRecord | null;
+  sellerCatalogBeers?: CatalogBeerRuntimeRecord[];
   onRequestLogin?: () => void;
   onUseDemoAccount?: (userId: string) => void;
   onSignOut?: () => void;
   onOpenStore?: (storeId: string) => void;
   onOpenBeer?: (beerId: string) => void;
   onAddProduct?: (draft: SellerProductDraft) => void;
+  onAdjustInventory?: (beerId: string, deltaUnits: number) => void;
   onAdvanceOrder?: (orderId: string) => void;
   onOpenHome?: () => void;
   onOpenSearch?: () => void;
@@ -45,12 +51,15 @@ export default function Profile({
   demoAccounts = [],
   storesData,
   orders,
+  sellerStore = null,
+  sellerCatalogBeers = [],
   onRequestLogin,
   onUseDemoAccount,
   onSignOut,
   onOpenStore,
   onOpenBeer,
   onAddProduct,
+  onAdjustInventory,
   onAdvanceOrder,
   onOpenHome,
   onOpenSearch,
@@ -65,6 +74,7 @@ export default function Profile({
     price: "",
     description: "",
     ibu: 30,
+    initialUnits: 24,
   });
 
   const favoriteBeers = currentUser
@@ -73,11 +83,6 @@ export default function Profile({
   const favoriteStores = currentUser
     ? storesData.filter((store) => currentUser.favoriteStoreIds.includes(store.id))
     : [];
-
-  const sellerStore =
-    currentUser?.role === "seller" && currentUser.sellerStoreId
-      ? getStoreById(storesData, currentUser.sellerStoreId)
-      : undefined;
 
   const sellerOrders =
     currentUser?.role === "seller" && currentUser.sellerStoreId
@@ -97,7 +102,16 @@ export default function Profile({
       price: "",
       description: "",
       ibu: 30,
+      initialUnits: 24,
     });
+  }
+
+  function getInventoryLabel(beer: CatalogBeerRuntimeRecord) {
+    if (beer.currentAvailableUnits <= 0) {
+      return "Esgotado";
+    }
+
+    return `${beer.currentAvailableUnits} un em estoque`;
   }
 
   return (
@@ -270,8 +284,21 @@ export default function Profile({
                     style={[style.input, style.textArea]}
                     multiline
                   />
+                  <TextInput
+                    placeholder="Estoque inicial (ex: 24)"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={String(draft.initialUnits)}
+                    onChangeText={(value) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        initialUnits: Number.isNaN(Number(value)) ? prev.initialUnits : Number(value),
+                      }))
+                    }
+                    keyboardType="numeric"
+                    style={style.input}
+                  />
                   <Text style={style.helperText}>
-                    Ao publicar, o novo produto passa a aparecer em busca, catalogo e na sua cervejaria.
+                    Ao publicar, o produto entra no catalogo persistido local e ja nasce com estoque operacional.
                   </Text>
                   <TouchableOpacity style={style.actionButton} onPress={handlePublishProduct}>
                     <Text style={style.actionButtonText}>Publicar produto</Text>
@@ -279,14 +306,48 @@ export default function Profile({
                 </View>
 
                 <Text style={style.sectionTitle}>Produtos publicados</Text>
-                {sellerStore.beers.map((beer) => (
-                  <TouchableOpacity key={beer.id} style={style.listButton} onPress={() => onOpenBeer?.(beer.id)}>
-                    <Text style={style.listButtonTitle}>{beer.name}</Text>
-                    <Text style={style.listButtonSubtitle}>
-                      {beer.style} - {beer.price} - IBU {beer.ibu}
-                    </Text>
-                  </TouchableOpacity>
+                {sellerCatalogBeers.map((beer) => (
+                  <View key={beer.id} style={style.listButton}>
+                    <TouchableOpacity onPress={() => onOpenBeer?.(beer.id)}>
+                      <View style={style.inventoryHeaderRow}>
+                        <Text style={style.listButtonTitle}>{beer.name}</Text>
+                        {beer.isLocalOnly ? (
+                          <View style={style.inventoryTag}>
+                            <Text style={style.inventoryTagText}>Local</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={style.listButtonSubtitle}>
+                        {beer.style} - {beer.price} - IBU {beer.ibu}
+                      </Text>
+                      <Text style={style.listButtonSubtitle}>
+                        Estoque: {getInventoryLabel(beer)} - sync base {beer.inventory.lastSyncedAt.slice(0, 16)}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <View style={style.inventoryActionRow}>
+                      <TouchableOpacity
+                        style={[style.inventoryActionButton, style.inventoryActionButtonSecondary]}
+                        onPress={() => onAdjustInventory?.(beer.id, -6)}
+                      >
+                        <Text style={[style.inventoryActionText, style.inventoryActionTextSecondary]}>
+                          Baixar -6
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[style.inventoryActionButton, style.inventoryActionButtonPrimary]}
+                        onPress={() => onAdjustInventory?.(beer.id, 12)}
+                      >
+                        <Text style={style.inventoryActionText}>Repor +12</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 ))}
+                {sellerCatalogBeers.length === 0 ? (
+                  <View style={style.card}>
+                    <Text style={style.cardText}>Nenhum produto operacional cadastrado para esta cervejaria.</Text>
+                  </View>
+                ) : null}
 
                 <Text style={style.sectionTitle}>Pedidos da sua cervejaria</Text>
                 {sellerOrders.map((order) => (

@@ -7,6 +7,12 @@ export type BeerItem = {
   rating: number;
   description: string;
   ibu: number;
+  inventory?: {
+    availableUnits: number;
+    isAvailable: boolean;
+    lastSyncedAt: string;
+  };
+  isLocalOnly?: boolean;
 };
 
 export type StoreItem = {

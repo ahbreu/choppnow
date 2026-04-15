@@ -10,12 +10,25 @@ import {
   homeHighlights,
 } from "../data/discovery";
 import { initialStores, StoreItem } from "../data/stores";
-import { CatalogRuntimeData, loadCatalogRuntimeData } from "../services/catalog/repository";
+import { CatalogBeerRuntimeRecord } from "../services/catalog/local-products";
+import { CatalogRuntimeData, CatalogStoreRecord, loadCatalogRuntimeData } from "../services/catalog/repository";
+
+const initialCatalogStores: CatalogStoreRecord[] = initialStores.map((store) => ({
+  id: store.id,
+  name: store.name,
+  tag: store.tag,
+  short: store.short,
+  description: store.description,
+  address: store.address,
+  rating: store.rating,
+}));
 
 function applyRuntimeCatalogState(
   runtimeCatalog: CatalogRuntimeData,
   setters: {
     setStoresData: (value: StoreItem[]) => void;
+    setCatalogStores: (value: CatalogStoreRecord[]) => void;
+    setCatalogInventoryRecords: (value: CatalogBeerRuntimeRecord[]) => void;
     setDiscoveryHighlights: (value: DiscoveryHighlight[]) => void;
     setDiscoveryCampaigns: (value: DiscoveryCampaign[]) => void;
     setDiscoveryStory: (value: DiscoveryStoryStep[]) => void;
@@ -23,6 +36,8 @@ function applyRuntimeCatalogState(
   }
 ) {
   setters.setStoresData(runtimeCatalog.storesData);
+  setters.setCatalogStores(runtimeCatalog.snapshot.stores);
+  setters.setCatalogInventoryRecords(runtimeCatalog.inventoryRecords);
   setters.setDiscoveryHighlights(runtimeCatalog.snapshot.discovery.highlights);
   setters.setDiscoveryCampaigns(runtimeCatalog.snapshot.discovery.campaigns);
   setters.setDiscoveryStory(runtimeCatalog.snapshot.discovery.storySteps);
@@ -31,6 +46,8 @@ function applyRuntimeCatalogState(
 
 export function useCatalogRuntime() {
   const [storesData, setStoresData] = useState<StoreItem[]>(initialStores);
+  const [catalogStores, setCatalogStores] = useState<CatalogStoreRecord[]>(initialCatalogStores);
+  const [catalogInventoryRecords, setCatalogInventoryRecords] = useState<CatalogBeerRuntimeRecord[]>([]);
   const [discoveryHighlights, setDiscoveryHighlights] = useState<DiscoveryHighlight[]>(homeHighlights);
   const [discoveryCampaigns, setDiscoveryCampaigns] = useState<DiscoveryCampaign[]>(homeCampaigns);
   const [discoveryStory, setDiscoveryStory] = useState<DiscoveryStoryStep[]>(discoveryStorySteps);
@@ -39,6 +56,8 @@ export function useCatalogRuntime() {
   const applyRuntimeCatalog = useCallback((runtimeCatalog: CatalogRuntimeData) => {
     applyRuntimeCatalogState(runtimeCatalog, {
       setStoresData,
+      setCatalogStores,
+      setCatalogInventoryRecords,
       setDiscoveryHighlights,
       setDiscoveryCampaigns,
       setDiscoveryStory,
@@ -71,7 +90,8 @@ export function useCatalogRuntime() {
 
   return {
     storesData,
-    setStoresData,
+    catalogStores,
+    catalogInventoryRecords,
     discoveryHighlights,
     discoveryCampaigns,
     discoveryStory,

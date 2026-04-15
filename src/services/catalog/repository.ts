@@ -12,6 +12,12 @@ import {
 } from "../../data/discovery";
 import { BeerItem, StoreItem, initialStores } from "../../data/stores";
 import { getItem, saveItem } from "../../utils/storage";
+import {
+  buildCatalogRuntimeBeerRecords,
+  createLocalCatalogBeerRecord,
+  mergeCatalogSnapshotWithLocalProducts,
+} from "./local-products";
+import type { CatalogBeerRuntimeRecord, CatalogLocalProductDraft } from "./local-products";
 
 export type CatalogInventory = {
   availableUnits: number;
@@ -60,6 +66,7 @@ export type CatalogRuntimeData = {
   source: "api" | "cache" | "seed";
   snapshot: CatalogSnapshot;
   storesData: StoreItem[];
+  inventoryRecords: CatalogBeerRuntimeRecord[];
   syncStatus: CatalogSyncStatus;
 };
 
@@ -124,6 +131,11 @@ type CatalogSyncMetadata = {
   lastErrorCode: CatalogSyncErrorCode | null;
 };
 
+type StoredCatalogSnapshotResult = {
+  snapshot: CatalogSnapshot;
+  source: "cache" | "seed";
+};
+
 type InventorySyncApiPayload = {
   syncedAt: string;
   updates: Array<{
@@ -142,6 +154,7 @@ type InventorySyncApiErrorPayload = {
 
 const CATALOG_API_BASE_URL = process.env.EXPO_PUBLIC_CATALOG_API_BASE_URL?.trim();
 const CATALOG_SNAPSHOT_KEY = "choppnow-catalog-snapshot";
+const CATALOG_LOCAL_PRODUCTS_KEY = "choppnow-catalog-local-products";
 const CATALOG_INVENTORY_OVERRIDE_KEY = "choppnow-catalog-inventory-overrides";
 const CATALOG_SYNC_QUEUE_KEY = "choppnow-catalog-sync-queue";
 const CATALOG_SYNC_META_KEY = "choppnow-catalog-sync-meta";
@@ -347,6 +360,7 @@ const BACKEND_CODE_TO_SYNC_ERROR: Record<string, CatalogSyncErrorCode> = {
   RATE_LIMITED: "http_error",
 };
 export const VISIBLE_BACKEND_SYNC_ERROR_CODES = ["STOCK_CONFLICT", "RATE_LIMITED", "VALIDATION_ERROR"] as const;
+export type { CatalogBeerRuntimeRecord, CatalogLocalProductDraft } from "./local-products";
 
 export const catalogApiContract = {
   runtimeEnv: CATALOG_RUNTIME_ENV,
@@ -389,6 +403,35 @@ export function getCatalogConfigWarnings() {
 function mapBackendCodeToSyncError(code: string | null): CatalogSyncErrorCode {
   if (!code) return "http_error";
   return BACKEND_CODE_TO_SYNC_ERROR[code] ?? "backend_rejected";
+}
+
+function isCatalogInventory(value: unknown): value is CatalogInventory {
+  if (!value || typeof value !== "object") return false;
+
+  const inventory = value as CatalogInventory;
+  return (
+    typeof inventory.availableUnits === "number" &&
+    typeof inventory.isAvailable === "boolean" &&
+    typeof inventory.lastSyncedAt === "string"
+  );
+}
+
+function isCatalogBeerRecord(value: unknown): value is CatalogBeerRecord {
+  if (!value || typeof value !== "object") return false;
+
+  const beer = value as CatalogBeerRecord;
+  return (
+    typeof beer.id === "string" &&
+    typeof beer.storeId === "string" &&
+    typeof beer.name === "string" &&
+    typeof beer.style === "string" &&
+    typeof beer.abv === "string" &&
+    typeof beer.price === "string" &&
+    typeof beer.rating === "number" &&
+    typeof beer.description === "string" &&
+    typeof beer.ibu === "number" &&
+    isCatalogInventory(beer.inventory)
+  );
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = CATALOG_API_TIMEOUT_MS) {
@@ -441,6 +484,16 @@ function buildSeedSnapshot(): CatalogSnapshot {
       filters: catalogFilterPresets,
     },
   };
+}
+
+async function loadCatalogLocalProducts() {
+  const stored = await getItem<unknown>(CATALOG_LOCAL_PRODUCTS_KEY);
+  if (!Array.isArray(stored)) return [];
+  return stored.filter(isCatalogBeerRecord);
+}
+
+async function saveCatalogLocalProducts(products: CatalogBeerRecord[]) {
+  await saveItem(CATALOG_LOCAL_PRODUCTS_KEY, products);
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -763,12 +816,10 @@ function parseCatalogSnapshot(
 
 function buildStoreItems(
   snapshot: CatalogSnapshot,
-  inventoryOverrides: Record<string, number>
+  inventoryRecords: CatalogBeerRuntimeRecord[]
 ): StoreItem[] {
-  const beersByStore = snapshot.beers.reduce<Record<string, BeerItem[]>>((acc, beer) => {
-    const overriddenUnits = inventoryOverrides[beer.id];
-    const availableUnits = typeof overriddenUnits === "number" ? overriddenUnits : beer.inventory.availableUnits;
-    if (availableUnits <= 0 || !beer.inventory.isAvailable) {
+  const beersByStore = inventoryRecords.reduce<Record<string, BeerItem[]>>((acc, beer) => {
+    if (!beer.currentIsAvailable) {
       return acc;
     }
 
@@ -785,6 +836,12 @@ function buildStoreItems(
       rating: beer.rating,
       description: beer.description,
       ibu: beer.ibu,
+      inventory: {
+        availableUnits: beer.currentAvailableUnits,
+        isAvailable: beer.currentIsAvailable,
+        lastSyncedAt: beer.inventory.lastSyncedAt,
+      },
+      isLocalOnly: beer.isLocalOnly,
     });
     return acc;
   }, {});
@@ -848,38 +905,62 @@ async function fetchCatalogSnapshotFromApiWithRetry(): Promise<CatalogSnapshot |
   throw lastError instanceof Error ? lastError : new Error("Catalog snapshot retry failed");
 }
 
-export async function loadCatalogRuntimeData(): Promise<CatalogRuntimeData> {
-  const inventoryOverrides =
-    (await getItem<Record<string, number>>(CATALOG_INVENTORY_OVERRIDE_KEY)) ?? {};
-
-  try {
-    const apiSnapshot = await fetchCatalogSnapshotFromApiWithRetry();
-    if (apiSnapshot) {
-      await saveItem(CATALOG_SNAPSHOT_KEY, apiSnapshot);
-      return buildRuntimeDataFromSnapshot("api", apiSnapshot, inventoryOverrides);
-    }
-  } catch {
-    // Fallback order: cached snapshot, then seed snapshot.
-  }
-
+async function loadStoredCatalogSnapshotOrSeed(): Promise<StoredCatalogSnapshotResult> {
   const cachedSnapshot = await getItem<CatalogSnapshot>(CATALOG_SNAPSHOT_KEY);
   if (cachedSnapshot) {
     const normalizedCachedSnapshot = parseCatalogSnapshot(cachedSnapshot);
     if (normalizedCachedSnapshot) {
       await saveItem(CATALOG_SNAPSHOT_KEY, normalizedCachedSnapshot);
-      return buildRuntimeDataFromSnapshot("cache", normalizedCachedSnapshot, inventoryOverrides);
+      return {
+        snapshot: normalizedCachedSnapshot,
+        source: "cache",
+      };
     }
   }
 
   const seedSnapshot = buildSeedSnapshot();
   await saveItem(CATALOG_SNAPSHOT_KEY, seedSnapshot);
-  return buildRuntimeDataFromSnapshot("seed", seedSnapshot, inventoryOverrides);
+  return {
+    snapshot: seedSnapshot,
+    source: "seed",
+  };
+}
+
+export async function loadCatalogRuntimeData(): Promise<CatalogRuntimeData> {
+  const [inventoryOverrides, localProducts] = await Promise.all([
+    getItem<Record<string, number>>(CATALOG_INVENTORY_OVERRIDE_KEY),
+    loadCatalogLocalProducts(),
+  ]);
+  const safeInventoryOverrides = inventoryOverrides ?? {};
+
+  try {
+    const apiSnapshot = await fetchCatalogSnapshotFromApiWithRetry();
+    if (apiSnapshot) {
+      await saveItem(CATALOG_SNAPSHOT_KEY, apiSnapshot);
+      return buildRuntimeDataFromSnapshot("api", apiSnapshot, safeInventoryOverrides, localProducts);
+    }
+  } catch {
+    // Fallback order: cached snapshot, then seed snapshot.
+  }
+
+  const fallbackSnapshot = await loadStoredCatalogSnapshotOrSeed();
+  return buildRuntimeDataFromSnapshot(
+    fallbackSnapshot.source,
+    fallbackSnapshot.snapshot,
+    safeInventoryOverrides,
+    localProducts
+  );
 }
 
 export async function queueInventoryAdjustment(beerId: string, deltaUnits: number, reason: string) {
-  const snapshot = (await getItem<CatalogSnapshot>(CATALOG_SNAPSHOT_KEY)) ?? buildSeedSnapshot();
+  const [baseSnapshot, localProducts] = await Promise.all([
+    loadStoredCatalogSnapshotOrSeed(),
+    loadCatalogLocalProducts(),
+  ]);
+  const snapshot = mergeCatalogSnapshotWithLocalProducts(baseSnapshot.snapshot, localProducts);
   const currentOverrides =
     (await getItem<Record<string, number>>(CATALOG_INVENTORY_OVERRIDE_KEY)) ?? {};
+  const localProductIds = new Set(localProducts.map((item) => item.id));
 
   const beerRecord = snapshot.beers.find((item) => item.id === beerId);
   if (!beerRecord) return;
@@ -905,10 +986,74 @@ export async function queueInventoryAdjustment(beerId: string, deltaUnits: numbe
     },
   ];
 
+  if (localProductIds.has(beerId)) {
+    const localNowIso = new Date().toISOString();
+    const nextLocalProducts = localProducts.map((product) =>
+      product.id === beerId
+        ? {
+            ...product,
+            inventory: {
+              availableUnits: nextUnits,
+              isAvailable: nextUnits > 0,
+              lastSyncedAt: localNowIso,
+            },
+          }
+        : product
+    );
+    await Promise.all([
+      saveItem(CATALOG_INVENTORY_OVERRIDE_KEY, nextOverrides),
+      saveCatalogLocalProducts(nextLocalProducts),
+    ]);
+    return;
+  }
+
   await Promise.all([
     saveItem(CATALOG_INVENTORY_OVERRIDE_KEY, nextOverrides),
     saveItem(CATALOG_SYNC_QUEUE_KEY, nextQueue),
   ]);
+}
+
+export async function publishCatalogProduct(storeId: string, draft: CatalogLocalProductDraft) {
+  const [baseSnapshot, localProducts, currentOverrides] = await Promise.all([
+    loadStoredCatalogSnapshotOrSeed(),
+    loadCatalogLocalProducts(),
+    getItem<Record<string, number>>(CATALOG_INVENTORY_OVERRIDE_KEY),
+  ]);
+
+  const storeExists = baseSnapshot.snapshot.stores.some((store) => store.id === storeId);
+  if (!storeExists) {
+    throw new Error("Loja nao encontrada para publicar o produto.");
+  }
+
+  const nextProduct = createLocalCatalogBeerRecord(
+    storeId,
+    draft,
+    [...baseSnapshot.snapshot.beers, ...localProducts].map((beer) => beer.id)
+  );
+  const nextLocalProducts = [...localProducts, nextProduct];
+  const nextOverrides = {
+    ...(currentOverrides ?? {}),
+    [nextProduct.id]: nextProduct.inventory.availableUnits,
+  };
+
+  await Promise.all([
+    saveCatalogLocalProducts(nextLocalProducts),
+    saveItem(CATALOG_INVENTORY_OVERRIDE_KEY, nextOverrides),
+  ]);
+
+  const mergedSnapshot = mergeCatalogSnapshotWithLocalProducts(baseSnapshot.snapshot, nextLocalProducts);
+  const runtimeRecords = buildCatalogRuntimeBeerRecords(
+    mergedSnapshot,
+    nextOverrides,
+    new Set(nextLocalProducts.map((beer) => beer.id))
+  );
+
+  const createdRecord = runtimeRecords.find((beer) => beer.id === nextProduct.id);
+  if (!createdRecord) {
+    throw new Error("Produto publicado, mas nao foi possivel materializar o runtime do catalogo.");
+  }
+
+  return createdRecord;
 }
 
 export async function getPendingInventorySyncCount() {
@@ -992,14 +1137,22 @@ export async function getLastCatalogRuntimeSource(): Promise<CatalogRuntimeData[
 async function buildRuntimeDataFromSnapshot(
   source: CatalogRuntimeData["source"],
   snapshot: CatalogSnapshot,
-  inventoryOverrides: Record<string, number>
+  inventoryOverrides: Record<string, number>,
+  localProducts: CatalogBeerRecord[] = []
 ): Promise<CatalogRuntimeData> {
+  const mergedSnapshot = mergeCatalogSnapshotWithLocalProducts(snapshot, localProducts);
+  const inventoryRecords = buildCatalogRuntimeBeerRecords(
+    mergedSnapshot,
+    inventoryOverrides,
+    new Set(localProducts.map((beer) => beer.id))
+  );
   const syncStatus = await getCatalogSyncStatus();
   await saveItem(CATALOG_LAST_SOURCE_KEY, source);
   return {
     source,
-    snapshot,
-    storesData: buildStoreItems(snapshot, inventoryOverrides),
+    snapshot: mergedSnapshot,
+    storesData: buildStoreItems(mergedSnapshot, inventoryRecords),
+    inventoryRecords,
     syncStatus,
   };
 }

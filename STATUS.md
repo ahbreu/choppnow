@@ -53,7 +53,8 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - alternancia entre loja recebendo pedidos e loja pausada
 - avancar status operacional do pedido
 - cancelar pedidos em estados permitidos
-- publicar produto novo localmente
+- publicar produto novo em overlay persistido do catalogo
+- ajustar estoque operacional por produto a partir do perfil
 
 ### Catalogo e resiliencia de dados
 
@@ -64,6 +65,8 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - normalizacao de payload remoto
 - contrato versionado de discovery
 - fila local de sincronizacao de inventario
+- overlay persistido para produtos locais do parceiro
+- runtime de inventario separado do catalogo visivel ao comprador
 - metadados e logs locais de sincronizacao
 - chips de status do runtime na home e no catalogo
 
@@ -88,14 +91,15 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 ### Operacao do parceiro
 
-- disponibilidade da loja e alteracoes de fila vivem em memoria durante a sessao
-- cadastro de novo produto nao persiste remotamente
+- disponibilidade da loja, pedidos e notificacoes ja persistem localmente
+- produtos novos e ajustes de estoque agora persistem localmente no runtime do catalogo
+- produtos locais ainda nao persistem em backend nem participam de um sync remoto real
 
 ### Qualidade e manutencao
 
 - `App.tsx` foi enxugado na Fase 1, mas ainda concentra regras demais
 - `src/services/catalog/repository.ts` concentra contrato, parse, cache, sync e status em um unico arquivo grande
-- existe uma base inicial de testes unitarios e scripts de validacao para `typecheck`, testes e export web
+- existe uma base inicial de testes unitarios cobrindo auth, carrinho, pedidos e helpers de catalogo
 - ainda nao existe lint nem cobertura de smoke end-to-end
 - `README.md`, `STATUS.md` e `PLAYBOOK.md` viraram a documentacao viva do repo
 
@@ -106,6 +110,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - estrutura por `pages`, `services`, `data`, `components`, `utils`
 - separacao inicial entre UI, seeds e servicos
 - camada de catalogo ja preparada para integracao real
+- camada de catalogo agora preserva produtos locais do seller sem quebrar `api -> cache -> seed`
 - camada de auth agora separa sessao, provedor demo e provedor Google
 - camada de orders agora separa runtime persistido local de gateway operacional
 - fluxo de comprador e parceiro visiveis o suficiente para orientar backlog
@@ -117,7 +122,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - extrair estado de auth, cart, orders e catalogo de `App.tsx`
 - separar `repository.ts` em modulos menores
 - formalizar contratos do backend em arquivos dedicados
-- substituir dados demo e placeholders por adaptadores reais
+- substituir produtos locais e placeholders por adaptadores reais de backend
 - ampliar os testes para cobrir fluxos completos de compra e autenticacao
 
 ## Verificacoes executadas neste snapshot

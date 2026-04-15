@@ -105,6 +105,54 @@ export function createStyles(theme: AppTheme) {
       color: theme.colors.textSecondary,
       fontSize: 13,
     },
+    inventoryHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    inventoryTag: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      backgroundColor: theme.colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    inventoryTagText: {
+      color: theme.colors.primary,
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    inventoryActionRow: {
+      marginTop: 12,
+      flexDirection: "row",
+      gap: 10,
+    },
+    inventoryActionButton: {
+      flex: 1,
+      height: 42,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+    },
+    inventoryActionButtonPrimary: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    inventoryActionButtonSecondary: {
+      backgroundColor: theme.colors.surfaceElevated,
+      borderColor: theme.colors.border,
+    },
+    inventoryActionText: {
+      color: theme.colors.textOnPrimary,
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    inventoryActionTextSecondary: {
+      color: theme.colors.textPrimary,
+    },
     actionButton: {
       marginTop: 10,
       height: 48,

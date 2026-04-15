@@ -28,6 +28,7 @@ import {
 } from "./src/data/commerce";
 import {
   flushInventorySyncQueueWithRetry,
+  publishCatalogProduct,
   queueInventoryAdjustment,
 } from "./src/services/catalog/repository";
 import { useAuthSession } from "./src/hooks/useAuthSession";
@@ -49,7 +50,8 @@ export default function App() {
   const { themeMode, setThemeMode } = useThemePreference("dark");
   const {
     storesData,
-    setStoresData,
+    catalogStores,
+    catalogInventoryRecords,
     discoveryHighlights,
     discoveryCampaigns,
     discoveryStory,
@@ -102,19 +104,83 @@ export default function App() {
 
   const selectedStore = useMemo(() => {
     if (currentRoute.name !== "store-details") return undefined;
-    return getStoreById(storesData, currentRoute.storeId);
-  }, [currentRoute, storesData]);
+    const visibleStore = getStoreById(storesData, currentRoute.storeId);
+    if (visibleStore) return visibleStore;
+
+    const runtimeStore = catalogStores.find((store) => store.id === currentRoute.storeId);
+    if (!runtimeStore) return undefined;
+
+    return {
+      ...runtimeStore,
+      beers: catalogInventoryRecords
+        .filter((beer) => beer.storeId === runtimeStore.id && beer.currentIsAvailable)
+        .map((beer) => ({
+          id: beer.id,
+          name: beer.name,
+          style: beer.style,
+          abv: beer.abv,
+          price: beer.price,
+          rating: beer.rating,
+          description: beer.description,
+          ibu: beer.ibu,
+          inventory: {
+            availableUnits: beer.currentAvailableUnits,
+            isAvailable: beer.currentIsAvailable,
+            lastSyncedAt: beer.inventory.lastSyncedAt,
+          },
+          isLocalOnly: beer.isLocalOnly,
+        })),
+    };
+  }, [catalogInventoryRecords, catalogStores, currentRoute, storesData]);
 
   const selectedBeer = useMemo(() => {
     if (currentRoute.name !== "beer-details") return undefined;
-    return getBeerById(storesData, currentRoute.beerId);
-  }, [currentRoute, storesData]);
+    const visibleBeer = getBeerById(storesData, currentRoute.beerId);
+    if (visibleBeer) return visibleBeer;
+
+    const runtimeBeer = catalogInventoryRecords.find((beer) => beer.id === currentRoute.beerId);
+    if (!runtimeBeer) return undefined;
+
+    const runtimeStore = catalogStores.find((store) => store.id === runtimeBeer.storeId);
+    if (!runtimeStore) return undefined;
+
+    return {
+      id: runtimeBeer.id,
+      name: runtimeBeer.name,
+      style: runtimeBeer.style,
+      abv: runtimeBeer.abv,
+      price: runtimeBeer.price,
+      rating: runtimeBeer.rating,
+      description: runtimeBeer.description,
+      ibu: runtimeBeer.ibu,
+      inventory: {
+        availableUnits: runtimeBeer.currentAvailableUnits,
+        isAvailable: runtimeBeer.currentIsAvailable,
+        lastSyncedAt: runtimeBeer.inventory.lastSyncedAt,
+      },
+      isLocalOnly: runtimeBeer.isLocalOnly,
+      storeId: runtimeStore.id,
+      storeName: runtimeStore.name,
+      storeShort: runtimeStore.short,
+      storeAddress: runtimeStore.address,
+    };
+  }, [catalogInventoryRecords, catalogStores, currentRoute, storesData]);
 
   const upsellBeers = useMemo(() => {
     if (currentRoute.name !== "beer-details") return [];
     if (!selectedBeer) return [];
     return getUpsellSuggestions(allBeers, selectedBeer.id, selectedBeer.storeId);
   }, [allBeers, currentRoute, selectedBeer]);
+  const sellerCatalogBeers = useMemo(() => {
+    if (!currentUser || currentUser.role !== "seller" || !currentUser.sellerStoreId) return [];
+    return catalogInventoryRecords
+      .filter((beer) => beer.storeId === currentUser.sellerStoreId)
+      .sort((left, right) => right.inventory.lastSyncedAt.localeCompare(left.inventory.lastSyncedAt));
+  }, [catalogInventoryRecords, currentUser]);
+  const sellerStore = useMemo(() => {
+    if (!currentUser || currentUser.role !== "seller" || !currentUser.sellerStoreId) return null;
+    return catalogStores.find((store) => store.id === currentUser.sellerStoreId) ?? null;
+  }, [catalogStores, currentUser]);
 
   function pushRoute(route: Route) {
     setRoutes((prev) => [...prev, route]);
@@ -325,33 +391,35 @@ export default function App() {
     }
   }
 
-  function handleAddProduct(draft: SellerProductDraft) {
+  async function handleAddProduct(draft: SellerProductDraft) {
     if (!currentUser || currentUser.role !== "seller" || !currentUser.sellerStoreId) return;
 
-    const generatedId = `${draft.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+    try {
+      const createdProduct = await publishCatalogProduct(currentUser.sellerStoreId, draft);
+      await refreshCatalogRuntime();
+      Alert.alert(
+        "Produto publicado",
+        `${createdProduct.name} entrou no catalogo com ${createdProduct.currentAvailableUnits} unidades.`
+      );
+    } catch {
+      Alert.alert("Falha no catalogo", "Nao foi possivel publicar o produto nesta sessao.");
+    }
+  }
 
-    setStoresData((prev) =>
-      prev.map((store) =>
-        store.id === currentUser.sellerStoreId
-          ? {
-              ...store,
-              beers: [
-                {
-                  id: generatedId,
-                  name: draft.name.trim(),
-                  style: draft.style.trim(),
-                  abv: draft.abv.trim(),
-                  price: draft.price.trim(),
-                  description: draft.description.trim(),
-                  ibu: draft.ibu,
-                  rating: 4.5,
-                },
-                ...store.beers,
-              ],
-            }
-          : store
-      )
-    );
+  async function handleAdjustInventory(beerId: string, deltaUnits: number) {
+    if (!currentUser || currentUser.role !== "seller" || !currentUser.sellerStoreId) return;
+
+    try {
+      await queueInventoryAdjustment(
+        beerId,
+        deltaUnits,
+        deltaUnits > 0 ? "seller-restock" : "seller-stock-adjustment"
+      );
+      await flushInventorySyncQueueWithRetry({ maxAttempts: 2, retryDelayMs: 700 });
+      await refreshCatalogRuntime();
+    } catch {
+      Alert.alert("Falha no estoque", "Nao foi possivel atualizar o estoque agora.");
+    }
   }
 
   function handleAdvanceOrder(orderId: string, targetStatus?: OrderStatusCode) {
@@ -521,12 +589,15 @@ export default function App() {
         demoAccounts={demoAccounts}
         storesData={storesData}
         orders={orders}
+        sellerStore={sellerStore}
+        sellerCatalogBeers={sellerCatalogBeers}
         onRequestLogin={resetToLogin}
         onUseDemoAccount={handleUseDemoAccount}
         onSignOut={handleSignOut}
         onOpenStore={(storeId) => pushRoute({ name: "store-details", storeId })}
         onOpenBeer={(beerId) => pushRoute({ name: "beer-details", beerId })}
         onAddProduct={handleAddProduct}
+        onAdjustInventory={handleAdjustInventory}
         onAdvanceOrder={handleAdvanceOrder}
         onOpenHome={resetToLanding}
         onOpenSearch={openSearch}
