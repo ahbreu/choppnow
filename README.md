@@ -6,6 +6,7 @@ O projeto ja nao e apenas uma landing com login. Hoje ele cobre uma fatia vertic
 
 Para um retrato mais objetivo do estado atual, veja `STATUS.md`.
 Para o recorte da primeira versao real, veja `MVP.md`.
+Para os contratos do backend do MVP, veja `BACKEND_CONTRACTS.md`.
 
 ## O que o app e hoje
 

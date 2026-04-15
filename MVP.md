@@ -2,6 +2,8 @@
 
 Escopo do MVP real do `choppnow`, definido em 2026-04-15.
 
+Para endpoints e payloads correspondentes ao MVP, veja `BACKEND_CONTRACTS.md`.
+
 Este documento existe para responder uma pergunta simples:
 
 - o que precisa funcionar de verdade para o app ser utilizavel na primeira versao real

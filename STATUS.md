@@ -100,6 +100,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 - `App.tsx` foi enxugado na Fase 1, mas ainda concentra regras demais
 - `src/services/catalog/repository.ts` concentra contrato, parse, cache, sync e status em um unico arquivo grande
+- existe um pacote dedicado de contratos em `src/services/contracts/*` e um mapa funcional em `BACKEND_CONTRACTS.md`
 - existe uma base de testes unitarios e smoke cobrindo auth, carrinho, pedidos, helpers de catalogo e readiness estrutural do app
 - ainda nao existe lint nem cobertura de smoke end-to-end
 - `README.md`, `STATUS.md` e `PLAYBOOK.md` viraram a documentacao viva do repo
@@ -112,6 +113,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - separacao inicial entre UI, seeds e servicos
 - camada de catalogo ja preparada para integracao real
 - camada de catalogo agora preserva produtos locais do seller sem quebrar `api -> cache -> seed`
+- contratos de backend do MVP agora estao formalizados e versionados no repo
 - camada de auth agora separa sessao, provedor demo e provedor Google
 - camada de orders agora separa runtime persistido local de gateway operacional
 - fluxo de comprador e parceiro visiveis o suficiente para orientar backlog
@@ -148,12 +150,11 @@ O bloqueio principal nao e apenas "tokens do Codex". Os limites reais sao:
 
 ## Proxima abordagem recomendada
 
-1. Considerar `MVP.md` como escopo congelado do que entra na primeira versao real.
-2. Entrar na Etapa 7 definindo contratos de backend para auth, catalogo, estoque, pedidos e seller ops.
-3. Priorizar a troca dos fluxos criticos locais por persistencia remota:
+1. Considerar `MVP.md` como escopo congelado e `BACKEND_CONTRACTS.md` como fonte de verdade dos endpoints do MVP.
+2. Entrar na Etapa 8 trocando os fluxos criticos locais por persistencia remota:
    - catalogo
    - estoque
    - pedidos
    - sessao
-4. Manter `npm run validate` como gate minimo a cada corte.
-5. Seguir em entregas pequenas, sempre fechando documento + validacao + commit.
+3. Manter `npm run validate` como gate minimo a cada corte.
+4. Seguir em entregas pequenas, sempre fechando documento + validacao + commit.

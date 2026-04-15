@@ -17,6 +17,12 @@ import {
   createLocalCatalogBeerRecord,
   mergeCatalogSnapshotWithLocalProducts,
 } from "./local-products";
+import {
+  CATALOG_DISCOVERY_SCHEMA_VERSION,
+  CATALOG_DISCOVERY_VERSION_HEADER,
+  CATALOG_INVENTORY_SYNC_PATH as CATALOG_SYNC_PATH,
+  CATALOG_SNAPSHOT_PATH,
+} from "../contracts/catalog";
 import type { CatalogBeerRuntimeRecord, CatalogLocalProductDraft } from "./local-products";
 
 export type CatalogInventory = {
@@ -160,10 +166,6 @@ const CATALOG_SYNC_QUEUE_KEY = "choppnow-catalog-sync-queue";
 const CATALOG_SYNC_META_KEY = "choppnow-catalog-sync-meta";
 const CATALOG_SYNC_LOG_KEY = "choppnow-catalog-sync-log";
 const CATALOG_LAST_SOURCE_KEY = "choppnow-catalog-last-source";
-const CATALOG_SNAPSHOT_PATH = "/v1/catalog/snapshot";
-const CATALOG_SYNC_PATH = "/v1/catalog/inventory/sync";
-const CATALOG_DISCOVERY_SCHEMA_VERSION = 1;
-const CATALOG_DISCOVERY_VERSION_HEADER = "x-choppnow-discovery-schema-version";
 const DEFAULT_CATALOG_API_TIMEOUT_MS = 4500;
 const DEFAULT_CATALOG_SNAPSHOT_TIMEOUT_MS = 3000;
 const DEFAULT_CATALOG_SYNC_TIMEOUT_MS = 6000;
