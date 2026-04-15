@@ -5,6 +5,7 @@ App Expo/React Native para descoberta, compra e operacao de pedidos de cervejas 
 O projeto ja nao e apenas uma landing com login. Hoje ele cobre uma fatia vertical funcional do produto, com experiencia de comprador, experiencia de parceiro e uma camada de catalogo preparada para integrar com backend quando ele existir.
 
 Para um retrato mais objetivo do estado atual, veja `STATUS.md`.
+Para o recorte da primeira versao real, veja `MVP.md`.
 
 ## O que o app e hoje
 

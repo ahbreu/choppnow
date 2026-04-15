@@ -229,6 +229,67 @@ Escopo:
 - typecheck
 - export web
 
+### Fase 6. Definicao do MVP real
+
+Escopo:
+
+- congelar o que entra na primeira versao utilizavel
+- separar obrigatorio de opcional
+- reduzir escopo para comprador real + seller basico + catalogo/pedido persistidos
+
+Saida esperada:
+
+- `MVP.md`
+
+### Fase 7. Contratos de backend
+
+Escopo:
+
+- definir entidades e payloads reais
+- formalizar auth, catalogo, estoque, pedidos e seller ops
+- remover ambiguidade entre runtime local e backend
+
+### Fase 8. Catalogo e estoque remotos
+
+Escopo:
+
+- trocar overlay local por persistencia remota
+- manter fallback `api -> cache -> seed`
+- ligar publicacao de produto e ajuste de estoque
+
+### Fase 9. Pedidos e checkout remotos
+
+Escopo:
+
+- trocar gateway local por pedidos persistidos
+- recuperar historico remoto
+- fechar o fluxo comprador -> seller
+
+### Fase 10. Auth remota
+
+Escopo:
+
+- sessao remota real
+- provider unico para buyer e seller
+- demo mode apenas como ferramenta de QA
+
+### Fase 11. Seller ops remota
+
+Escopo:
+
+- disponibilidade da loja persistida
+- fila operacional remota
+- console do parceiro ligado a dados reais
+
+### Fase 12. Corte final de release
+
+Escopo:
+
+- lint
+- smoke final
+- readiness operacional
+- checklist de deploy/ambiente
+
 ## Workflow recomendado por sessao
 
 ### Sessao de implementacao

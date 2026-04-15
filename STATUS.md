@@ -3,6 +3,7 @@
 Snapshot do estado atual do `choppnow` em 2026-04-15.
 
 Para o fluxo de retomada em modo `Codex-only`, veja `PLAYBOOK.md`.
+Para o escopo da primeira release real, veja `MVP.md`.
 
 ## Contexto
 
@@ -147,14 +148,12 @@ O bloqueio principal nao e apenas "tokens do Codex". Os limites reais sao:
 
 ## Proxima abordagem recomendada
 
-1. Preservar este snapshot como marco de retomada.
-2. Extrair modulos de estado antes de novas features grandes.
-3. Escolher um MVP real de integracao:
-- auth real
-   - persistencia remota de pedidos
-   - persistencia de produtos/estoque
-4. Adicionar validacoes minimas:
-   - typecheck
-   - export web
-   - testes de smoke para carrinho e pedido
+1. Considerar `MVP.md` como escopo congelado do que entra na primeira versao real.
+2. Entrar na Etapa 7 definindo contratos de backend para auth, catalogo, estoque, pedidos e seller ops.
+3. Priorizar a troca dos fluxos criticos locais por persistencia remota:
+   - catalogo
+   - estoque
+   - pedidos
+   - sessao
+4. Manter `npm run validate` como gate minimo a cada corte.
 5. Seguir em entregas pequenas, sempre fechando documento + validacao + commit.
