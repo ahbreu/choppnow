@@ -42,6 +42,7 @@ export default function Checkout({
   const subtotal = getCartSubtotal(cart);
   const { deliveryFee, serviceFee, total } = getCheckoutTotals(subtotal, cart.items.length > 0);
   const isBuyer = currentUser?.role === "buyer";
+  const deliveryAddress = currentUser?.address?.trim() || "Endereco pendente de cadastro";
 
   async function handleConfirmOrder() {
     if (!onPlaceOrder || isSubmitting) return;
@@ -69,7 +70,9 @@ export default function Checkout({
         </View>
 
         <Text style={style.title}>Checkout</Text>
-        <Text style={style.subtitle}>Finalize seu pedido com dados locais de teste.</Text>
+        <Text style={style.subtitle}>
+          Finalize seu pedido com persistencia local operacional enquanto a integracao real nao entra.
+        </Text>
 
         {!isBuyer ? (
           <View style={style.emptyCard}>
@@ -86,8 +89,8 @@ export default function Checkout({
           <>
             <View style={style.blockCard}>
               <Text style={style.blockTitle}>Entrega</Text>
-              <Text style={style.blockText}>Endereco de entrega (placeholder):</Text>
-              <Text style={style.blockStrong}>SQN 408, Bloco H, apto 302 - Brasilia, DF</Text>
+              <Text style={style.blockText}>Endereco de entrega:</Text>
+              <Text style={style.blockStrong}>{deliveryAddress}</Text>
               <TextInput
                 value={deliveryNotes}
                 onChangeText={setDeliveryNotes}

@@ -140,6 +140,8 @@ export type OrderItemRecord = {
   createdAt: string;
   slaMinutes: number;
   status: OrderStatusCode;
+  checkoutReference?: string;
+  buyerNotificationsEnabled?: boolean;
 };
 
 export type OperationalNotification = {

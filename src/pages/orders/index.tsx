@@ -166,6 +166,9 @@ export default function Orders({
         <Text style={style.cardText}>{store?.name || "Loja"}</Text>
         <Text style={style.cardText}>{getOrderItemsLabel(order)}</Text>
         <Text style={style.cardText}>Criado em {order.createdAt}</Text>
+        {order.checkoutReference ? (
+          <Text style={style.cardText}>Referencia do checkout: {order.checkoutReference}</Text>
+        ) : null}
         <Text style={style.cardText}>SLA alvo: {order.slaMinutes} min</Text>
         <Text style={style.messageText}>
           {role === "seller" ? state.partnerMessage : state.customerMessage}

@@ -52,6 +52,7 @@ test("local order record computes a buyer order with totals and SLA", () => {
   assert.equal(order.status, "placed");
   assert.equal(order.slaMinutes, 35);
   assert.equal(order.items.length, 1);
+  assert.equal(order.buyerNotificationsEnabled, true);
 });
 
 test("operational notifications are created for buyer and seller", () => {
@@ -73,6 +74,21 @@ test("operational notifications are created for buyer and seller", () => {
 
   assert.equal(notifications.length, 2);
   assert.deepEqual(audienceIds, ["user-apoena", "user-pedro"]);
+});
+
+test("operational notifications keep working for buyer ids outside demo accounts", () => {
+  const notifications = createOperationalNotifications(
+    {
+      ...initialOrders[0],
+      buyerId: "google:buyer-1",
+      buyerNotificationsEnabled: false,
+    },
+    "confirmed"
+  );
+
+  assert.equal(notifications.length, 2);
+  assert.equal(notifications[0]?.audienceUserId, "google:buyer-1");
+  assert.equal(notifications[0]?.channel, "in_app");
 });
 
 test("local orders gateway advances seller order status", () => {
@@ -102,4 +118,22 @@ test("local orders gateway blocks invalid seller transitions", () => {
     (error: unknown) =>
       error instanceof OrdersGatewayError && error.code === "invalid_transition"
   );
+});
+
+test("local orders gateway places order with persisted checkout reference", async () => {
+  assert.ok(buyer);
+
+  const result = await localOrdersGateway.placeOrder({
+    buyer: buyer!,
+    cart: buildCart(),
+    draft: {
+      paymentMethod: "pix",
+      deliveryNotes: "Portaria principal",
+      couponCode: "",
+    },
+    storeId: "1",
+  });
+
+  assert.match(result.checkoutReference, /^LOCAL-/);
+  assert.equal(result.order.checkoutReference, result.checkoutReference);
 });

@@ -19,6 +19,13 @@ import {
 } from "./gateway";
 import { localCheckoutGateway } from "../checkout/local";
 
+type NotificationAudience = Pick<UserProfile, "id" | "notificationsEnabled"> | null | undefined;
+
+type NotificationAudienceMap = {
+  buyer?: NotificationAudience;
+  seller?: NotificationAudience;
+};
+
 function formatNotificationTime() {
   return new Date().toLocaleTimeString("pt-BR", {
     hour: "2-digit",
@@ -26,12 +33,26 @@ function formatNotificationTime() {
   });
 }
 
+function formatOrderCreatedAt() {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+}
+
 export function createOperationalNotifications(
   order: OrderItemRecord,
-  nextStatus: OrderStatusCode
+  nextStatus: OrderStatusCode,
+  audiences: NotificationAudienceMap = {}
 ): OperationalNotification[] {
-  const buyer = demoAuthGateway.getUserById(order.buyerId);
-  const seller = demoAuthGateway.getSellerUserByStoreId(order.storeId);
+  const buyer =
+    audiences.buyer ?? {
+      id: order.buyerId,
+      notificationsEnabled: order.buyerNotificationsEnabled ?? true,
+    };
+  const seller = audiences.seller ?? demoAuthGateway.getSellerUserByStoreId(order.storeId);
   const nextState = getOrderStateModel(nextStatus);
   const createdAt = formatNotificationTime();
 
@@ -71,7 +92,7 @@ export function buildLocalOrderRecord({
   cart,
   draft,
   storeId,
-}: PlaceOrderPayload): OrderItemRecord {
+}: PlaceOrderPayload, options?: { checkoutReference?: string }): OrderItemRecord {
   if (buyer.role !== "buyer") {
     throw new OrdersGatewayError("invalid_buyer", "Somente compradores podem criar pedidos.");
   }
@@ -93,9 +114,11 @@ export function buildLocalOrderRecord({
       quantity: item.quantity,
     })),
     total: formattedTotal,
-    createdAt: "Agora",
+    createdAt: formatOrderCreatedAt(),
     slaMinutes,
     status: "placed",
+    checkoutReference: options?.checkoutReference,
+    buyerNotificationsEnabled: buyer.notificationsEnabled,
   };
 }
 
@@ -122,16 +145,22 @@ function resolveNextOrderStatus(currentOrder: OrderItemRecord, targetStatus?: Or
 async function placeOrder(payload: PlaceOrderPayload): Promise<PlaceOrderResult> {
   const { buyer, cart, draft, storeId } = payload;
   const checkoutResult = await localCheckoutGateway.submitCheckout(cart, draft);
+  const seller = demoAuthGateway.getSellerUserByStoreId(storeId);
   const order = buildLocalOrderRecord({
     buyer,
     cart,
     draft,
     storeId,
+  }, {
+    checkoutReference: checkoutResult.placeholderReference,
   });
 
   return {
     order,
-    notifications: createOperationalNotifications(order, "placed"),
+    notifications: createOperationalNotifications(order, "placed", {
+      buyer,
+      seller,
+    }),
     checkoutReference: checkoutResult.placeholderReference,
   };
 }
@@ -153,7 +182,13 @@ function advanceOrder(payload: AdvanceOrderPayload): AdvanceOrderResult {
 
   return {
     updatedOrder,
-    notifications: createOperationalNotifications(updatedOrder, nextStatus),
+    notifications: createOperationalNotifications(updatedOrder, nextStatus, {
+      buyer: {
+        id: updatedOrder.buyerId,
+        notificationsEnabled: updatedOrder.buyerNotificationsEnabled ?? true,
+      },
+      seller: currentUser,
+    }),
   };
 }
 

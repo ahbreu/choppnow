@@ -79,11 +79,12 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 ### Checkout e pedidos
 
-- checkout ainda e placeholder/local
+- checkout continua local, mas agora o runtime operacional fica persistido entre reinicios
 - nao existe gateway real de pagamento
-- endereco e cupom ainda sao placeholders
-- pedidos e notificacoes nao estao persistidos em backend
-- notificacoes do comprador continuam mais confiaveis no fluxo demo do que no fluxo Google
+- endereco agora respeita o perfil autenticado no checkout
+- cupom ainda e placeholder
+- pedidos, notificacoes e disponibilidade do parceiro agora persistem localmente no app
+- ainda nao existe persistencia em backend para pedidos, notificacoes ou checkout
 
 ### Operacao do parceiro
 
@@ -106,6 +107,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - separacao inicial entre UI, seeds e servicos
 - camada de catalogo ja preparada para integracao real
 - camada de auth agora separa sessao, provedor demo e provedor Google
+- camada de orders agora separa runtime persistido local de gateway operacional
 - fluxo de comprador e parceiro visiveis o suficiente para orientar backlog
 - uso de TypeScript estrito
 - scripts de validacao repetiveis para retomar o app com pouco contexto
@@ -142,8 +144,8 @@ O bloqueio principal nao e apenas "tokens do Codex". Os limites reais sao:
 1. Preservar este snapshot como marco de retomada.
 2. Extrair modulos de estado antes de novas features grandes.
 3. Escolher um MVP real de integracao:
-   - auth real
-   - persistencia de pedidos
+- auth real
+   - persistencia remota de pedidos
    - persistencia de produtos/estoque
 4. Adicionar validacoes minimas:
    - typecheck

@@ -33,6 +33,7 @@ import {
 import { useAuthSession } from "./src/hooks/useAuthSession";
 import { useBuyerCartPersistence } from "./src/hooks/useBuyerCartPersistence";
 import { useCatalogRuntime } from "./src/hooks/useCatalogRuntime";
+import { useOrdersRuntime } from "./src/hooks/useOrdersRuntime";
 import { useThemePreference } from "./src/hooks/useThemePreference";
 import { Route } from "./src/navigation/routes";
 import { OrdersGatewayError } from "./src/services/orders/gateway";
@@ -55,12 +56,7 @@ export default function App() {
     catalogFilters,
     refreshCatalogRuntime,
   } = useCatalogRuntime();
-  const [orders, setOrders] = useState(initialOrders);
-  const [notifications, setNotifications] = useState<OperationalNotification[]>([]);
   const [cart, setCart] = useState(initialCartState);
-  const [sellerAvailability, setSellerAvailability] = useState<Record<string, boolean>>(
-    INITIAL_SELLER_AVAILABILITY
-  );
   const {
     currentUser,
     demoAccounts,
@@ -72,6 +68,16 @@ export default function App() {
     signOut,
     canSignInWithGoogle,
   } = useAuthSession();
+  const {
+    orders,
+    notifications,
+    sellerAvailability,
+    registerPlacedOrder,
+    registerUpdatedOrder,
+    toggleSellerAvailability,
+  } = useOrdersRuntime({
+    initialSellerAvailability: INITIAL_SELLER_AVAILABILITY,
+  });
 
   const currentRoute = routes[routes.length - 1];
   const theme = useMemo(() => getTheme(themeMode), [themeMode]);
@@ -180,11 +186,6 @@ export default function App() {
   function handleSignOut() {
     signOut();
     setRootRoute({ name: "login" });
-  }
-
-  function appendNotifications(nextNotifications: OperationalNotification[]) {
-    if (nextNotifications.length === 0) return;
-    setNotifications((prev) => [...nextNotifications, ...prev].slice(0, 30));
   }
 
   function handleAddToCart(
@@ -303,8 +304,7 @@ export default function App() {
         storeId: resolvedStoreId,
       });
 
-      setOrders((prev) => [result.order, ...prev]);
-      appendNotifications(result.notifications);
+      registerPlacedOrder(result.order, result.notifications);
 
       Promise.all(
         checkoutCart.items.map((item) =>
@@ -365,10 +365,7 @@ export default function App() {
         targetStatus,
       });
 
-      setOrders((prev) =>
-        prev.map((order) => (order.id === orderId ? result.updatedOrder : order))
-      );
-      appendNotifications(result.notifications);
+      registerUpdatedOrder(result.updatedOrder, result.notifications);
     } catch (error) {
       if (error instanceof OrdersGatewayError) {
         if (error.code === "order_not_found") {
@@ -390,10 +387,7 @@ export default function App() {
   }
 
   function handleToggleSellerAvailability(storeId: string) {
-    setSellerAvailability((prev) => ({
-      ...prev,
-      [storeId]: !prev[storeId],
-    }));
+    toggleSellerAvailability(storeId);
   }
 
   if (currentRoute.name === "store-details") {
