@@ -9,8 +9,10 @@
     "web": "expo start --web",
     "typecheck": "./scripts/typecheck.sh",
     "test:unit": "./scripts/test-unit.sh",
+    "test:smoke": "./scripts/test-smoke.sh",
     "export:web": "./scripts/export-web.sh",
-    "validate": "./scripts/validate-phase1.sh"
+    "validate:core": "./scripts/validate-phase1.sh",
+    "validate": "./scripts/validate-release.sh"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

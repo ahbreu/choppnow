@@ -65,12 +65,12 @@ Para um retrato mais objetivo do estado atual, veja `STATUS.md`.
 
 - Autenticacao real ainda nao esta concluida.
 - Login por e-mail usa contas demo hardcoded.
-- OAuth Google tem request configurada, mas o fluxo ainda nao esta conectado ao estado principal do app.
+- OAuth Google entra no estado principal do app como comprador local quando configurado no ambiente.
 - Checkout ainda usa gateway local placeholder.
 - Pagamento real nao existe.
 - Endereco de entrega e cupom ainda sao placeholders.
-- Pedidos, notificacoes e disponibilidade do parceiro vivem majoritariamente em memoria.
-- Cadastro de novo produto atualiza o estado local da sessao, sem persistencia remota.
+- Pedidos, notificacoes, disponibilidade do parceiro, produtos locais e estoque persistem localmente.
+- Nada disso ainda e persistido em backend real.
 
 ## Catalogo e backend
 
@@ -172,16 +172,19 @@ npm run web
 
 ## Verificacao recomendada
 
-Typecheck:
+Validacao de corte:
 
 ```bash
-./node_modules/.bin/tsc --noEmit
+npm run validate
 ```
 
-Export web:
+Checks separados:
 
 ```bash
-./node_modules/.bin/expo export --platform web
+npm run typecheck
+npm run test:unit
+npm run test:smoke
+npm run export:web
 ```
 
 ## Estado atual resumido

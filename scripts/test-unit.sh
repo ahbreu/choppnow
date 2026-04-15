@@ -10,9 +10,17 @@ shopt -s nullglob
 test_files=("$repo_root"/.test-dist/tests/*.test.js)
 shopt -u nullglob
 
-if [ "${#test_files[@]}" -eq 0 ]; then
+filtered_test_files=()
+for test_file in "${test_files[@]}"; do
+  case "$test_file" in
+    *.smoke.test.js) ;;
+    *) filtered_test_files+=("$test_file") ;;
+  esac
+done
+
+if [ "${#filtered_test_files[@]}" -eq 0 ]; then
   printf 'No compiled test files were found in %s\n' "$repo_root/.test-dist/tests" >&2
   exit 1
 fi
 
-exec "$node_bin" --test "${test_files[@]}"
+exec "$node_bin" --test "${filtered_test_files[@]}"

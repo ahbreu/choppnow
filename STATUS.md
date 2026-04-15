@@ -99,7 +99,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 - `App.tsx` foi enxugado na Fase 1, mas ainda concentra regras demais
 - `src/services/catalog/repository.ts` concentra contrato, parse, cache, sync e status em um unico arquivo grande
-- existe uma base inicial de testes unitarios cobrindo auth, carrinho, pedidos e helpers de catalogo
+- existe uma base de testes unitarios e smoke cobrindo auth, carrinho, pedidos, helpers de catalogo e readiness estrutural do app
 - ainda nao existe lint nem cobertura de smoke end-to-end
 - `README.md`, `STATUS.md` e `PLAYBOOK.md` viraram a documentacao viva do repo
 
@@ -129,6 +129,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 - typecheck: script dedicado concluido com sucesso
 - testes unitarios: fluxo base concluido com sucesso
+- smoke tests: readiness e fluxo critico concluidos com sucesso
 - export web: script dedicado concluido com sucesso
 
 ## Leitura honesta do momento do projeto
