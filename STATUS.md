@@ -1,6 +1,6 @@
 # STATUS
 
-Snapshot do estado atual do `choppnow` em 2026-04-15.
+Snapshot do estado atual do `choppnow` em 2026-04-16.
 
 Para o fluxo de retomada em modo `Codex-only`, veja `PLAYBOOK.md`.
 Para o escopo da primeira release real, veja `MVP.md`.
@@ -73,6 +73,14 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - metadados e logs locais de sincronizacao
 - chips de status do runtime na home e no catalogo
 
+### Backend local de validacao
+
+- backend Node local dentro do proprio repo em `backend/`
+- auth, catalogo, pedidos e seller ops compativeis com os contratos do app
+- persistencia local em `backend/runtime/state.json`
+- reset de estado e smoke automatizado
+- modo opcional para servir o `dist/` web e entregar um preview para validacao
+
 ## O que ainda nao esta concluido
 
 ### Autenticacao
@@ -106,6 +114,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - `src/services/catalog/repository.ts` concentra contrato, parse, cache, sync e status em um unico arquivo grande
 - existe um pacote dedicado de contratos em `src/services/contracts/*` e um mapa funcional em `BACKEND_CONTRACTS.md`
 - existe uma base de testes unitarios e smoke cobrindo auth, carrinho, pedidos, helpers de catalogo e readiness estrutural do app
+- existe smoke dedicado para o backend local de validacao
 - ainda nao existe lint nem cobertura de smoke end-to-end
 - `README.md`, `STATUS.md` e `PLAYBOOK.md` viraram a documentacao viva do repo
 
@@ -118,6 +127,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - camada de catalogo ja preparada para integracao real
 - camada de catalogo agora preserva produtos locais do seller sem quebrar `api -> cache -> seed`
 - contratos de backend do MVP agora estao formalizados e versionados no repo
+- backend local de validacao agora permite demonstrar o app sem depender de infraestrutura externa
 - camada de auth agora separa sessao, provedor demo e provedor Google
 - camada de orders agora separa runtime persistido local de gateway operacional
 - camada de orders agora opera em modo remoto-first para create/list/status, com fallback local em indisponibilidade de rede
@@ -138,6 +148,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - typecheck: script dedicado concluido com sucesso
 - testes unitarios: fluxo base concluido com sucesso
 - smoke tests: readiness e fluxo critico concluidos com sucesso
+- backend smoke: fluxo auth -> catalogo -> orders -> seller ops concluido com sucesso
 - export web: script dedicado concluido com sucesso
 
 ## Leitura honesta do momento do projeto

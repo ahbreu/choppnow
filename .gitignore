@@ -9,6 +9,7 @@ dist/
 .test-dist/
 web-build/
 expo-env.d.ts
+backend/runtime/
 
 # Native
 .kotlin/

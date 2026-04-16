@@ -7,6 +7,7 @@ O projeto ja nao e apenas uma landing com login. Hoje ele cobre uma fatia vertic
 Para um retrato mais objetivo do estado atual, veja `STATUS.md`.
 Para o recorte da primeira versao real, veja `MVP.md`.
 Para os contratos do backend do MVP, veja `BACKEND_CONTRACTS.md`.
+Para o roteiro de validacao com backend local, veja `PARTNER_VALIDATION.md`.
 
 ## O que o app e hoje
 
@@ -86,6 +87,8 @@ Ela tambem possui fila local de sincronizacao de inventario, publicacao remota d
 
 Sem backend ativo, o app continua navegavel usando cache ou seed local.
 
+O repo tambem inclui um backend local de validacao em `backend/`, com persistencia em arquivo e compatibilidade com os endpoints principais do app.
+
 ### Contrato esperado do snapshot
 
 O endpoint de snapshot deve responder com:
@@ -111,6 +114,7 @@ O cliente envia o header `x-choppnow-discovery-schema-version` para negociar a v
 ## Estrutura principal
 
 - `App.tsx`: orquestracao de rotas, sessao local, carrinho, pedidos e fluxo principal
+- `backend/*`: backend local de validacao para auth, catalogo, pedidos e seller ops
 - `src/pages/*`: telas do app
 - `src/data/*`: seeds e modelos locais
 - `src/services/auth/*`: autenticacao demo, Google e sessao remota
@@ -153,6 +157,12 @@ O cliente envia o header `x-choppnow-discovery-schema-version` para negociar a v
 - `EXPO_PUBLIC_ORDERS_API_BASE_URL`
 - `EXPO_PUBLIC_ORDERS_API_TIMEOUT_MS`
 
+### Backend local de validacao
+
+- `CHOPPNOW_BACKEND_HOST`
+- `CHOPPNOW_BACKEND_PORT`
+- `CHOPPNOW_BACKEND_SERVE_DIST`
+
 Arquivos `.env` continuam ignorados no Git.
 Arquivo versionado de exemplo: `.env.example`.
 
@@ -184,6 +194,34 @@ Para web:
 npm run web
 ```
 
+## Backend local de validacao
+
+Reset do estado:
+
+```bash
+npm run backend:reset
+```
+
+Subir backend:
+
+```bash
+npm run backend:start
+```
+
+Smoke do backend:
+
+```bash
+npm run backend:smoke
+```
+
+Preview web para demonstracao:
+
+```bash
+npm run partner:preview
+```
+
+O roteiro completo para mostrar o app ao seu socio esta em `PARTNER_VALIDATION.md`.
+
 ## Verificacao recomendada
 
 Validacao de corte:
@@ -198,6 +236,7 @@ Checks separados:
 npm run typecheck
 npm run test:unit
 npm run test:smoke
+npm run backend:smoke
 npm run export:web
 ```
 
