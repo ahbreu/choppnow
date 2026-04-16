@@ -83,6 +83,7 @@ Observacoes:
 
 - `seller` deve vir com `sellerStoreId`
 - Google OAuth pode ser adicionado depois sem mudar o contrato de sessao do MVP
+- os dominios autenticados do app podem consumir `Authorization: Bearer <token>` a partir desta etapa
 
 ### Catalogo
 
@@ -198,14 +199,14 @@ Resposta:
 }
 ```
 
-Enquanto a sessao remota do MVP ainda nao estiver pronta, a integracao de orders pode aceitar estes headers de contexto:
+Enquanto alguns dominios ainda migram totalmente para bearer session, a integracao de orders pode aceitar estes headers de contexto:
 
 - `x-choppnow-user-id`
 - `x-choppnow-user-role`
 - `x-choppnow-user-email`
 - `x-choppnow-store-id` quando o contexto for seller
 
-Eles permitem testar create/list/status sem bloquear a Etapa 10 de auth remota.
+Eles permitem manter compatibilidade enquanto a sessao remota se consolida em todo o app.
 
 Status do MVP:
 
@@ -241,8 +242,8 @@ Resposta:
 
 ### Auth
 
-- hoje: sessao local em `src/services/auth/session.ts`
-- proximo passo: adaptador remoto mantendo a mesma ideia de sessao unificada
+- hoje: sessao unificada em `src/services/auth/session.ts` com adaptador remoto-first em `src/services/auth/remote.ts`
+- proximo passo: integrar Google e demais dominios diretamente via bearer session
 
 ### Catalogo
 
@@ -251,8 +252,8 @@ Resposta:
 
 ### Orders
 
-- hoje: gateway local em `src/services/orders/local.ts`
-- proximo passo: manter interface de gateway e trocar implementacao
+- hoje: runtime remoto-first com fallback em `src/services/orders/runtime.ts`
+- proximo passo: remover headers de compatibilidade e depender prioritariamente da sessao bearer
 
 ### Seller ops
 

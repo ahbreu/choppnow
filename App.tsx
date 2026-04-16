@@ -60,6 +60,7 @@ export default function App() {
   } = useCatalogRuntime();
   const [cart, setCart] = useState(initialCartState);
   const {
+    authMessage,
     currentUser,
     demoAccounts,
     googleStatusMessage,
@@ -231,16 +232,16 @@ export default function App() {
     resetToLogin();
   }
 
-  function handleSignIn(email: string, password: string) {
-    const signedIn = signInWithEmail(email, password);
+  async function handleSignIn(email: string, password: string) {
+    const signedIn = await signInWithEmail(email, password);
     if (!signedIn) return false;
 
     setRootRoute({ name: "landing" });
     return true;
   }
 
-  function handleUseDemoAccount(userId: string) {
-    const signedIn = signInWithDemoAccount(userId);
+  async function handleUseDemoAccount(userId: string) {
+    const signedIn = await signInWithDemoAccount(userId);
     if (!signedIn) return;
 
     setRootRoute({ name: "profile" });
@@ -250,8 +251,8 @@ export default function App() {
     await signInWithGoogle();
   }
 
-  function handleSignOut() {
-    signOut();
+  async function handleSignOut() {
+    await signOut();
     setRootRoute({ name: "login" });
   }
 
@@ -645,6 +646,7 @@ export default function App() {
       canSignInWithGoogle={canSignInWithGoogle}
       isGoogleLoading={isGoogleLoading}
       googleStatusMessage={googleStatusMessage}
+      authStatusMessage={authMessage}
       theme={theme}
       themeMode={themeMode}
       onToggleTheme={toggleTheme}

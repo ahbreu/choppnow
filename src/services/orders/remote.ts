@@ -7,6 +7,7 @@ import {
 } from "../../data/orders";
 import { UserProfile } from "../../data/users";
 import { demoAuthGateway } from "../auth/demo";
+import { loadPersistedAuthHeaders } from "../auth/session";
 import {
   BUYER_ORDERS_PATH,
   CreateOrderRequest,
@@ -135,7 +136,7 @@ function formatRemoteOrderCreatedAt(createdAt: string) {
   }).format(parsed);
 }
 
-function buildOrdersContextHeaders(user: UserProfile) {
+function buildOrdersContextHeaders(user: UserProfile): Record<string, string> {
   return {
     [ORDERS_USER_ID_HEADER]: user.id,
     [ORDERS_USER_ROLE_HEADER]: user.role,
@@ -182,6 +183,19 @@ async function parseErrorPayload(response: Response) {
   } catch {
     return null;
   }
+}
+
+async function buildRequestHeaders(
+  user: UserProfile,
+  headers: Record<string, string> = {}
+): Promise<Record<string, string>> {
+  const authHeaders = await loadPersistedAuthHeaders();
+
+  return {
+    ...authHeaders,
+    ...buildOrdersContextHeaders(user),
+    ...headers,
+  };
 }
 
 function ensureOrdersApiConfigured() {
@@ -326,11 +340,10 @@ export async function placeOrderRemoteFirst(payload: PlaceOrderPayload): Promise
 
   const response = await fetchWithTimeout(`${ORDERS_API_BASE_URL}${ORDERS_PATH}`, {
     method: "POST",
-    headers: {
+    headers: await buildRequestHeaders(payload.buyer, {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...buildOrdersContextHeaders(payload.buyer),
-    },
+    }),
     body: JSON.stringify(buildCreateOrderRequest(payload)),
   });
 
@@ -369,11 +382,10 @@ export async function advanceOrderRemoteFirst(payload: AdvanceOrderPayload): Pro
     `${ORDERS_API_BASE_URL}${ORDER_STATUS_BY_ID_PATH.replace(":id", payload.orderId)}`,
     {
       method: "PATCH",
-      headers: {
+      headers: await buildRequestHeaders(payload.currentUser, {
         Accept: "application/json",
         "Content-Type": "application/json",
-        ...buildOrdersContextHeaders(payload.currentUser),
-      },
+      }),
       body: JSON.stringify({ status: nextStatus }),
     }
   );
@@ -411,10 +423,9 @@ export async function fetchOrdersForUserRemote(user: UserProfile) {
 
   const path = user.role === "seller" && user.sellerStoreId ? SELLER_ORDERS_PATH : BUYER_ORDERS_PATH;
   const response = await fetchWithTimeout(`${ORDERS_API_BASE_URL}${path}`, {
-    headers: {
+    headers: await buildRequestHeaders(user, {
       Accept: "application/json",
-      ...buildOrdersContextHeaders(user),
-    },
+    }),
   });
 
   if (!response.ok) {

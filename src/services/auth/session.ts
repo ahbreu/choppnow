@@ -7,7 +7,7 @@ function hasStringArray(value: unknown): value is string[] {
 }
 
 function isAuthProvider(value: unknown): value is AuthProvider {
-  return value === "demo" || value === "google";
+  return value === "demo" || value === "google" || value === "remote";
 }
 
 function isAuthSessionUser(value: unknown): value is AuthSessionUser {
@@ -46,11 +46,33 @@ export function createAuthSession(provider: AuthProvider, user: AuthSessionUser)
   return { provider, user };
 }
 
+export function createRemoteAuthSession(
+  user: AuthSessionUser,
+  authState: {
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt: string;
+  }
+): AuthSession {
+  return {
+    provider: "remote",
+    user,
+    accessToken: authState.accessToken,
+    refreshToken: authState.refreshToken,
+    expiresAt: authState.expiresAt,
+  };
+}
+
 export function isPersistedAuthSession(value: unknown): value is AuthSession {
   if (!value || typeof value !== "object") return false;
 
   const session = value as AuthSession;
-  return isAuthProvider(session.provider) && isAuthSessionUser(session.user);
+  const hasValidTokenFields =
+    (typeof session.accessToken === "string" || typeof session.accessToken === "undefined") &&
+    (typeof session.refreshToken === "string" || typeof session.refreshToken === "undefined") &&
+    (typeof session.expiresAt === "string" || typeof session.expiresAt === "undefined");
+
+  return isAuthProvider(session.provider) && isAuthSessionUser(session.user) && hasValidTokenFields;
 }
 
 export function createGoogleBuyerProfile(identity: GoogleIdentity): AuthSessionUser {
@@ -70,6 +92,18 @@ export function createGoogleBuyerProfile(identity: GoogleIdentity): AuthSessionU
   };
 }
 
+export function buildAuthSessionHeaders(
+  session: AuthSession | null | undefined
+): Record<string, string> {
+  if (!session || session.provider !== "remote" || !session.accessToken) {
+    return {};
+  }
+
+  return {
+    Authorization: `Bearer ${session.accessToken}`,
+  };
+}
+
 async function loadStorageModule() {
   return import("../../utils/storage");
 }
@@ -78,6 +112,11 @@ export async function loadPersistedAuthSession() {
   const { getItem } = await loadStorageModule();
   const stored = await getItem<unknown>(AUTH_SESSION_STORAGE_KEY);
   return isPersistedAuthSession(stored) ? stored : null;
+}
+
+export async function loadPersistedAuthHeaders() {
+  const session = await loadPersistedAuthSession();
+  return buildAuthSessionHeaders(session);
 }
 
 export async function persistAuthSession(session: AuthSession) {

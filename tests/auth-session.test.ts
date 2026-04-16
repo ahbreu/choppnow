@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   createAuthSession,
   createGoogleBuyerProfile,
+  createRemoteAuthSession,
   isPersistedAuthSession,
 } from "../src/services/auth/session";
 
@@ -35,6 +36,32 @@ test("persisted auth session validator accepts a normalized auth session", () =>
     favoriteStoreIds: [],
     notificationsEnabled: true,
   });
+
+  assert.equal(isPersistedAuthSession(session), true);
+});
+
+test("persisted auth session validator accepts remote token metadata", () => {
+  const session = createRemoteAuthSession(
+    {
+      id: "user-pedro",
+      email: "pedro@choppnow.app",
+      password: "",
+      name: "Pedro",
+      role: "buyer",
+      avatarInitials: "PE",
+      headline: "Conta sincronizada com backend",
+      phone: "(61) 99999-1000",
+      address: "SQS 308, Asa Sul - Brasilia, DF",
+      favoriteBeerIds: [],
+      favoriteStoreIds: [],
+      notificationsEnabled: true,
+    },
+    {
+      accessToken: "token",
+      refreshToken: "refresh-token",
+      expiresAt: "2026-04-16T12:00:00.000Z",
+    }
+  );
 
   assert.equal(isPersistedAuthSession(session), true);
 });

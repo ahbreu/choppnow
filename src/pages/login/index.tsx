@@ -15,12 +15,13 @@ type LoginHelperAccount = {
 
 type LoginProps = {
   onContinueAsGuest?: () => void;
-  onSignIn?: (email: string, password: string) => boolean;
+  onSignIn?: (email: string, password: string) => boolean | Promise<boolean>;
   onSignInWithGoogle?: () => void;
   helperAccounts?: LoginHelperAccount[];
   canSignInWithGoogle?: boolean;
   isGoogleLoading?: boolean;
   googleStatusMessage?: string | null;
+  authStatusMessage?: string | null;
   theme: AppTheme;
   themeMode: ThemeMode;
   onToggleTheme?: () => void;
@@ -34,6 +35,7 @@ export default function Login({
   canSignInWithGoogle = false,
   isGoogleLoading = false,
   googleStatusMessage = null,
+  authStatusMessage = null,
   theme,
   themeMode,
   onToggleTheme,
@@ -65,8 +67,8 @@ export default function Login({
     onSignInWithGoogle?.();
   }
 
-  function handleSignIn() {
-    const signedIn = onSignIn?.(email, password);
+  async function handleSignIn() {
+    const signedIn = await onSignIn?.(email, password);
     if (!signedIn) {
       setError("Credenciais invalidas. Use uma das contas de teste.");
     }
@@ -116,6 +118,7 @@ export default function Login({
             </TouchableOpacity>
 
             {googleStatusMessage ? <Text style={style.helperText}>{googleStatusMessage}</Text> : null}
+            {authStatusMessage ? <Text style={style.helperText}>{authStatusMessage}</Text> : null}
 
             <TouchableOpacity style={style.guestButton} onPress={handleContinueAsGuest}>
               <Text style={style.guestButtonText}>Continuar sem login</Text>
@@ -152,6 +155,7 @@ export default function Login({
             />
 
             {error ? <Text style={style.errorText}>{error}</Text> : null}
+            {!error && authStatusMessage ? <Text style={style.errorText}>{authStatusMessage}</Text> : null}
 
             <TouchableOpacity style={style.primaryButton} onPress={handleSignIn}>
               <Text style={style.primaryButtonText}>Entrar</Text>

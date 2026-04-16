@@ -77,11 +77,11 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 ### Autenticacao
 
-- sessao local agora e unificada e persistida entre reinicios
-- login por e-mail continua usando usuarios demo, mas isolado como provedor de teste
-- Google OAuth agora conversa com o estado principal do app quando configurado no ambiente
-- contas Google entram como comprador local do app ate existir backend real
-- nao existe sessao remota real nem sincronizacao de perfil com backend
+- sessao agora e unificada, persistida e tenta revalidacao remota via `auth/me`
+- login por e-mail agora tenta backend real antes de cair para contas demo
+- Google OAuth continua conversando com o estado principal do app quando configurado no ambiente
+- contas Google ainda entram como comprador local do app ate existir adaptador remoto dedicado
+- logout remoto agora e executado em best effort quando a sessao veio do backend
 
 ### Checkout e pedidos
 

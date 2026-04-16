@@ -12,6 +12,7 @@ import {
 } from "../../data/discovery";
 import { BeerItem, StoreItem, initialStores } from "../../data/stores";
 import { getItem, saveItem } from "../../utils/storage";
+import { loadPersistedAuthHeaders } from "../auth/session";
 import {
   buildCatalogRuntimeBeerRecords,
   createLocalCatalogBeerRecord,
@@ -892,6 +893,7 @@ async function createCatalogProductInApi(
   draft: CatalogLocalProductDraft
 ): Promise<CatalogBeerRecord | null> {
   if (!CATALOG_API_BASE_URL) return null;
+  const authHeaders = await loadPersistedAuthHeaders();
 
   const response = await fetchWithTimeout(
     `${CATALOG_API_BASE_URL}${SELLER_PRODUCTS_PATH}`,
@@ -900,6 +902,7 @@ async function createCatalogProductInApi(
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
+        ...authHeaders,
       },
       body: JSON.stringify(buildCreateSellerProductRequest(storeId, draft)),
     },
@@ -1305,10 +1308,12 @@ export async function flushInventorySyncQueue(maxBatchSize = 30): Promise<Invent
   };
 
   try {
+    const authHeaders = await loadPersistedAuthHeaders();
     const response = await fetchWithTimeout(`${CATALOG_API_BASE_URL}${CATALOG_SYNC_PATH}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders,
       },
       body: JSON.stringify(payload),
     }, CATALOG_SYNC_TIMEOUT_MS);
