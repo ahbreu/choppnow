@@ -71,7 +71,7 @@ test("critical commerce smoke keeps buyer checkout and seller fulfillment cohere
   const visitedStatuses: OrderStatusCode[] = [currentOrder.status];
 
   while (currentOrder && currentOrder.status !== "delivered") {
-    const update = localOrdersGateway.advanceOrder({
+    const update = await localOrdersGateway.advanceOrder({
       currentUser: seller,
       orders: runtimeState.orders,
       orderId: currentOrder.id,

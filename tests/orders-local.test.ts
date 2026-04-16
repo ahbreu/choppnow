@@ -91,10 +91,10 @@ test("operational notifications keep working for buyer ids outside demo accounts
   assert.equal(notifications[0]?.channel, "in_app");
 });
 
-test("local orders gateway advances seller order status", () => {
+test("local orders gateway advances seller order status", async () => {
   assert.ok(seller);
 
-  const result = localOrdersGateway.advanceOrder({
+  const result = await localOrdersGateway.advanceOrder({
     currentUser: seller!,
     orders: initialOrders,
     orderId: "order-1001",
@@ -104,10 +104,10 @@ test("local orders gateway advances seller order status", () => {
   assert.equal(result.notifications.length, 2);
 });
 
-test("local orders gateway blocks invalid seller transitions", () => {
+test("local orders gateway blocks invalid seller transitions", async () => {
   assert.ok(seller);
 
-  assert.throws(
+  await assert.rejects(
     () =>
       localOrdersGateway.advanceOrder({
         currentUser: seller!,

@@ -68,10 +68,11 @@ Para os contratos do backend do MVP, veja `BACKEND_CONTRACTS.md`.
 - Autenticacao real ainda nao esta concluida.
 - Login por e-mail usa contas demo hardcoded.
 - OAuth Google entra no estado principal do app como comprador local quando configurado no ambiente.
-- Checkout ainda usa gateway local placeholder.
+- Checkout e pedidos agora tentam persistir no backend de orders quando a API existe, com fallback local resiliente.
 - Pagamento real nao existe.
 - Endereco de entrega e cupom ainda sao placeholders.
-- Pedidos, notificacoes e disponibilidade do parceiro persistem localmente.
+- Pedidos continuam espelhados localmente para resiliencia de runtime.
+- Notificacoes e disponibilidade do parceiro persistem localmente.
 - Catalogo e estoque do seller agora tentam persistir no backend quando a API existe, com fallback local resiliente.
 - Sessao, pedidos e operacao da loja ainda nao estao persistidos em backend real.
 
@@ -141,6 +142,11 @@ O cliente envia o header `x-choppnow-discovery-schema-version` para negociar a v
 - `EXPO_PUBLIC_CATALOG_SYNC_RETRY_MAX_DELAY_MS`
 - `EXPO_PUBLIC_CATALOG_DEBUG_WARNINGS`
 - `EXPO_PUBLIC_CATALOG_STATUS_REFRESH_MS`
+
+### Orders runtime
+
+- `EXPO_PUBLIC_ORDERS_API_BASE_URL`
+- `EXPO_PUBLIC_ORDERS_API_TIMEOUT_MS`
 
 Arquivos `.env` continuam ignorados no Git.
 Arquivo versionado de exemplo: `.env.example`.

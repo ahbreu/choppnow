@@ -194,5 +194,5 @@ function advanceOrder(payload: AdvanceOrderPayload): AdvanceOrderResult {
 
 export const localOrdersGateway: OrdersGateway = {
   placeOrder,
-  advanceOrder,
+  advanceOrder: async (payload) => advanceOrder(payload),
 };

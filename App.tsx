@@ -38,7 +38,7 @@ import { useOrdersRuntime } from "./src/hooks/useOrdersRuntime";
 import { useThemePreference } from "./src/hooks/useThemePreference";
 import { Route } from "./src/navigation/routes";
 import { OrdersGatewayError } from "./src/services/orders/gateway";
-import { localOrdersGateway } from "./src/services/orders/local";
+import { advanceOrderWithFallback, placeOrderWithFallback } from "./src/services/orders/runtime";
 
 const INITIAL_SELLER_AVAILABILITY = initialStores.reduce<Record<string, boolean>>((acc, store) => {
   acc[store.id] = true;
@@ -79,6 +79,7 @@ export default function App() {
     toggleSellerAvailability,
   } = useOrdersRuntime({
     initialSellerAvailability: INITIAL_SELLER_AVAILABILITY,
+    currentUser,
   });
 
   const currentRoute = routes[routes.length - 1];
@@ -363,7 +364,7 @@ export default function App() {
     }
 
     try {
-      const result = await localOrdersGateway.placeOrder({
+      const result = await placeOrderWithFallback({
         buyer: currentUser,
         cart: checkoutCart,
         draft,
@@ -385,9 +386,9 @@ export default function App() {
 
       setCart(initialCartState);
       setRootRoute({ name: "orders" });
-      Alert.alert("Pedido recebido", `Checkout local confirmado (${result.checkoutReference}).`);
+      Alert.alert("Pedido recebido", `Pedido registrado (${result.checkoutReference}).`);
     } catch {
-      Alert.alert("Falha no checkout", "Nao foi possivel finalizar o checkout local.");
+      Alert.alert("Falha no checkout", "Nao foi possivel finalizar o pedido agora.");
     }
   }
 
@@ -423,11 +424,11 @@ export default function App() {
     }
   }
 
-  function handleAdvanceOrder(orderId: string, targetStatus?: OrderStatusCode) {
+  async function handleAdvanceOrder(orderId: string, targetStatus?: OrderStatusCode) {
     if (!currentUser) return;
 
     try {
-      const result = localOrdersGateway.advanceOrder({
+      const result = await advanceOrderWithFallback({
         currentUser,
         orders,
         orderId,

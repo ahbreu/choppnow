@@ -198,6 +198,15 @@ Resposta:
 }
 ```
 
+Enquanto a sessao remota do MVP ainda nao estiver pronta, a integracao de orders pode aceitar estes headers de contexto:
+
+- `x-choppnow-user-id`
+- `x-choppnow-user-role`
+- `x-choppnow-user-email`
+- `x-choppnow-store-id` quando o contexto for seller
+
+Eles permitem testar create/list/status sem bloquear a Etapa 10 de auth remota.
+
 Status do MVP:
 
 - `placed`

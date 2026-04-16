@@ -1,19 +1,23 @@
 import { useEffect, useState } from "react";
 import { OperationalNotification, OrderItemRecord } from "../data/orders";
+import { UserProfile } from "../data/users";
+import { fetchOrdersForCurrentUserWithFallback } from "../services/orders/runtime";
 import {
   createInitialOrdersRuntimeState,
   loadOrdersRuntimeState,
   OrdersRuntimeState,
   persistOrdersRuntimeState,
-  prependOperationalNotifications,
   upsertRuntimeOrder,
+  prependOperationalNotifications,
 } from "../services/orders/storage";
+import { mergeRemoteOrdersIntoRuntime } from "../services/orders/remote";
 
 type UseOrdersRuntimeOptions = {
   initialSellerAvailability: Record<string, boolean>;
+  currentUser: UserProfile | null;
 };
 
-export function useOrdersRuntime({ initialSellerAvailability }: UseOrdersRuntimeOptions) {
+export function useOrdersRuntime({ initialSellerAvailability, currentUser }: UseOrdersRuntimeOptions) {
   const initialState = createInitialOrdersRuntimeState(initialSellerAvailability);
   const [orders, setOrders] = useState<OrderItemRecord[]>(() => initialState.orders);
   const [notifications, setNotifications] = useState<OperationalNotification[]>(
@@ -65,6 +69,25 @@ export function useOrdersRuntime({ initialSellerAvailability }: UseOrdersRuntime
       // Keep the operational flow responsive even when local persistence is unavailable.
     });
   }, [hasHydrated, notifications, orders, sellerAvailability]);
+
+  useEffect(() => {
+    if (!hasHydrated || !currentUser) return;
+
+    let mounted = true;
+
+    fetchOrdersForCurrentUserWithFallback(currentUser)
+      .then((remoteOrders) => {
+        if (!mounted || !remoteOrders) return;
+        setOrders((currentOrders) => mergeRemoteOrdersIntoRuntime(currentOrders, remoteOrders));
+      })
+      .catch(() => {
+        // Keep local runtime state if remote sync is unavailable.
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser, hasHydrated]);
 
   function appendNotifications(nextNotifications: OperationalNotification[]) {
     if (nextNotifications.length === 0) return;

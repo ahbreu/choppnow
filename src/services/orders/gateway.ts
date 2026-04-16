@@ -47,5 +47,5 @@ export type AdvanceOrderResult = {
 
 export interface OrdersGateway {
   placeOrder(payload: PlaceOrderPayload): Promise<PlaceOrderResult>;
-  advanceOrder(payload: AdvanceOrderPayload): AdvanceOrderResult;
+  advanceOrder(payload: AdvanceOrderPayload): Promise<AdvanceOrderResult>;
 }

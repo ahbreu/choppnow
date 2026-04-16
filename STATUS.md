@@ -43,8 +43,8 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - add-ons por item
 - upsell local na tela da cerveja
 - carrinho persistido localmente por usuario comprador
-- checkout local
-- criacao de pedido em runtime
+- checkout remoto-first com fallback local
+- criacao de pedido em runtime com tentativa de persistencia remota
 - acompanhamento de pedidos ativos e historico
 
 ### Fluxo vendedor
@@ -85,12 +85,13 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 
 ### Checkout e pedidos
 
-- checkout continua local, mas agora o runtime operacional fica persistido entre reinicios
+- checkout e pedidos agora tentam persistir no backend de orders quando a API esta configurada
 - nao existe gateway real de pagamento
 - endereco agora respeita o perfil autenticado no checkout
 - cupom ainda e placeholder
-- pedidos, notificacoes e disponibilidade do parceiro agora persistem localmente no app
-- ainda nao existe persistencia em backend para pedidos, notificacoes ou checkout
+- pedidos remotos podem ser lidos do backend para o usuario autenticado e mesclados ao runtime local
+- notificacoes e disponibilidade do parceiro continuam persistidas localmente no app
+- ainda nao existe persistencia em backend para notificacoes ou disponibilidade da loja
 
 ### Operacao do parceiro
 
@@ -119,6 +120,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - contratos de backend do MVP agora estao formalizados e versionados no repo
 - camada de auth agora separa sessao, provedor demo e provedor Google
 - camada de orders agora separa runtime persistido local de gateway operacional
+- camada de orders agora opera em modo remoto-first para create/list/status, com fallback local em indisponibilidade de rede
 - fluxo de comprador e parceiro visiveis o suficiente para orientar backlog
 - uso de TypeScript estrito
 - scripts de validacao repetiveis para retomar o app com pouco contexto
@@ -154,6 +156,6 @@ O bloqueio principal nao e apenas "tokens do Codex". Os limites reais sao:
 ## Proxima abordagem recomendada
 
 1. Considerar `MVP.md` como escopo congelado e `BACKEND_CONTRACTS.md` como fonte de verdade dos endpoints do MVP.
-2. Com catalogo e estoque ja conectados em modo remoto-first, entrar na proxima etapa trocando pedidos e sessao por persistencia remota.
+2. Com catalogo, estoque, checkout e pedidos ja conectados em modo remoto-first, a proxima etapa e fechar sessao remota real.
 3. Manter `npm run validate` como gate minimo a cada corte.
 4. Seguir em entregas pequenas, sempre fechando documento + validacao + commit.
