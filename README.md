@@ -2,7 +2,7 @@
 
 App Expo/React Native para descoberta, compra e operacao de pedidos de cervejas e chopp artesanal.
 
-O projeto ja nao e apenas uma landing com login. Hoje ele cobre uma fatia vertical funcional do produto, com experiencia de comprador, experiencia de parceiro e uma camada de catalogo preparada para integrar com backend quando ele existir.
+O projeto ja nao e apenas uma landing com login. Hoje ele cobre uma fatia vertical funcional do produto, com experiencia de comprador, experiencia de parceiro e uma camada de catalogo operando em modo remoto-first quando o backend existe.
 
 Para um retrato mais objetivo do estado atual, veja `STATUS.md`.
 Para o recorte da primeira versao real, veja `MVP.md`.
@@ -71,8 +71,9 @@ Para os contratos do backend do MVP, veja `BACKEND_CONTRACTS.md`.
 - Checkout ainda usa gateway local placeholder.
 - Pagamento real nao existe.
 - Endereco de entrega e cupom ainda sao placeholders.
-- Pedidos, notificacoes, disponibilidade do parceiro, produtos locais e estoque persistem localmente.
-- Nada disso ainda e persistido em backend real.
+- Pedidos, notificacoes e disponibilidade do parceiro persistem localmente.
+- Catalogo e estoque do seller agora tentam persistir no backend quando a API existe, com fallback local resiliente.
+- Sessao, pedidos e operacao da loja ainda nao estao persistidos em backend real.
 
 ## Catalogo e backend
 
@@ -80,7 +81,7 @@ A camada de catalogo ja foi preparada para funcionar com fallback resiliente:
 
 - `api -> cache -> seed`
 
-Ela tambem possui fila local de sincronizacao de inventario, metadados de sync e contrato versionado para discovery.
+Ela tambem possui fila local de sincronizacao de inventario, publicacao remota de produto com fallback local, metadados de sync e contrato versionado para discovery.
 
 Sem backend ativo, o app continua navegavel usando cache ou seed local.
 

@@ -22,8 +22,17 @@ import {
   CATALOG_DISCOVERY_VERSION_HEADER,
   CATALOG_INVENTORY_SYNC_PATH as CATALOG_SYNC_PATH,
   CATALOG_SNAPSHOT_PATH,
+  type InventorySyncReason,
+  SELLER_PRODUCTS_PATH,
 } from "../contracts/catalog";
 import type { CatalogBeerRuntimeRecord, CatalogLocalProductDraft } from "./local-products";
+import {
+  applyInventorySyncUpdatesToSnapshot,
+  buildCreateSellerProductRequest,
+  extractCatalogBeerFromMutationResponse,
+  extractInventorySyncResponse,
+  upsertCatalogBeerInSnapshot,
+} from "./remote";
 
 export type CatalogInventory = {
   availableUnits: number;
@@ -80,7 +89,7 @@ export type InventorySyncQueueItem = {
   id: string;
   beerId: string;
   availableUnits: number;
-  reason: string;
+  reason: InventorySyncReason;
   queuedAt: string;
 };
 
@@ -140,17 +149,6 @@ type CatalogSyncMetadata = {
 type StoredCatalogSnapshotResult = {
   snapshot: CatalogSnapshot;
   source: "cache" | "seed";
-};
-
-type InventorySyncApiPayload = {
-  syncedAt: string;
-  updates: Array<{
-    eventId: string;
-    beerId: string;
-    availableUnits: number;
-    reason: string;
-    queuedAt: string;
-  }>;
 };
 
 type InventorySyncApiErrorPayload = {
@@ -369,6 +367,7 @@ export const catalogApiContract = {
   runtimeEnvRaw: CATALOG_RUNTIME_ENV_RAW,
   snapshotPath: CATALOG_SNAPSHOT_PATH,
   inventorySyncPath: CATALOG_SYNC_PATH,
+  sellerProductsPath: SELLER_PRODUCTS_PATH,
   discovery: {
     schemaVersion: CATALOG_DISCOVERY_SCHEMA_VERSION,
     maxSupportedSchemaVersion: CATALOG_DISCOVERY_SCHEMA_VERSION,
@@ -888,6 +887,55 @@ async function fetchCatalogSnapshotFromApi(): Promise<CatalogSnapshot | null> {
   return parseCatalogSnapshot(payload, { responseDiscoveryVersion });
 }
 
+async function createCatalogProductInApi(
+  storeId: string,
+  draft: CatalogLocalProductDraft
+): Promise<CatalogBeerRecord | null> {
+  if (!CATALOG_API_BASE_URL) return null;
+
+  const response = await fetchWithTimeout(
+    `${CATALOG_API_BASE_URL}${SELLER_PRODUCTS_PATH}`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(buildCreateSellerProductRequest(storeId, draft)),
+    },
+    CATALOG_API_TIMEOUT_MS
+  );
+
+  if (!response.ok) {
+    let payload: InventorySyncApiErrorPayload | null = null;
+    try {
+      payload = (await response.json()) as InventorySyncApiErrorPayload;
+    } catch {
+      payload = null;
+    }
+
+    const payloadMessage =
+      typeof payload?.message === "string" && payload.message.trim().length > 0
+        ? payload.message
+        : `Catalog product publish returned ${response.status}`;
+    throw new Error(payloadMessage);
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  const product = extractCatalogBeerFromMutationResponse(payload);
+  if (!product) {
+    throw new Error("Catalog product publish returned an invalid payload.");
+  }
+
+  return product;
+}
+
 function waitSnapshotRetryDelay(attempt: number) {
   const nextDelay = Math.max(200, Math.round(CATALOG_SNAPSHOT_RETRY_DELAY_MS * attempt));
   return new Promise((resolve) => setTimeout(resolve, nextDelay));
@@ -954,7 +1002,11 @@ export async function loadCatalogRuntimeData(): Promise<CatalogRuntimeData> {
   );
 }
 
-export async function queueInventoryAdjustment(beerId: string, deltaUnits: number, reason: string) {
+export async function queueInventoryAdjustment(
+  beerId: string,
+  deltaUnits: number,
+  reason: InventorySyncReason
+) {
   const [baseSnapshot, localProducts] = await Promise.all([
     loadStoredCatalogSnapshotOrSeed(),
     loadCatalogLocalProducts(),
@@ -1025,6 +1077,49 @@ export async function publishCatalogProduct(storeId: string, draft: CatalogLocal
   const storeExists = baseSnapshot.snapshot.stores.some((store) => store.id === storeId);
   if (!storeExists) {
     throw new Error("Loja nao encontrada para publicar o produto.");
+  }
+
+  try {
+    const remoteProduct = await createCatalogProductInApi(storeId, draft);
+    if (remoteProduct) {
+      const nextSnapshot = upsertCatalogBeerInSnapshot(baseSnapshot.snapshot, remoteProduct);
+      const nextLocalProducts = localProducts.filter((product) => product.id !== remoteProduct.id);
+      const nextOverrides = {
+        ...(currentOverrides ?? {}),
+      };
+      delete nextOverrides[remoteProduct.id];
+
+      await Promise.all([
+        saveItem(CATALOG_SNAPSHOT_KEY, nextSnapshot),
+        saveCatalogLocalProducts(nextLocalProducts),
+        saveItem(CATALOG_INVENTORY_OVERRIDE_KEY, nextOverrides),
+      ]);
+
+      const runtimeRecords = buildCatalogRuntimeBeerRecords(
+        nextSnapshot,
+        nextOverrides,
+        new Set(nextLocalProducts.map((beer) => beer.id))
+      );
+
+      const createdRecord = runtimeRecords.find((beer) => beer.id === remoteProduct.id);
+      if (!createdRecord) {
+        throw new Error("Produto remoto criado, mas nao foi possivel materializar o runtime do catalogo.");
+      }
+
+      return createdRecord;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+    const shouldFallbackToLocal =
+      message.includes("failed to fetch") ||
+      message.includes("fetch failed") ||
+      message.includes("network") ||
+      message.includes("aborted") ||
+      message.includes("timeout");
+
+    if (!shouldFallbackToLocal) {
+      throw error instanceof Error ? error : new Error("Falha ao publicar produto no backend.");
+    }
   }
 
   const nextProduct = createLocalCatalogBeerRecord(
@@ -1198,7 +1293,7 @@ export async function flushInventorySyncQueue(maxBatchSize = 30): Promise<Invent
   }
 
   const nextBatch = pendingQueue.slice(0, normalizedBatchSize);
-  const payload: InventorySyncApiPayload = {
+  const payload = {
     syncedAt: nowIso,
     updates: nextBatch.map((item) => ({
       eventId: item.id,
@@ -1256,15 +1351,56 @@ export async function flushInventorySyncQueue(maxBatchSize = 30): Promise<Invent
       return result;
     }
 
+    let syncResponse = null;
+    try {
+      syncResponse = extractInventorySyncResponse((await response.json()) as unknown);
+    } catch {
+      syncResponse = null;
+    }
+
+    if (syncResponse && (syncResponse.rejectedCount > 0 || syncResponse.acceptedCount < nextBatch.length)) {
+      const persistedMessage = "Catalog inventory sync returned partial acceptance.";
+      await saveCatalogSyncMetadata({
+        lastAttemptAt: nowIso,
+        lastSuccessAt: null,
+        lastError: persistedMessage,
+        lastErrorCode: "backend_rejected",
+      });
+      const result: InventorySyncFlushResult = {
+        status: "failed",
+        attemptedCount: nextBatch.length,
+        syncedCount: 0,
+        pendingCount: pendingQueue.length,
+        lastError: persistedMessage,
+        lastErrorCode: "backend_rejected",
+      };
+      await appendInventorySyncLog(result);
+      return result;
+    }
+
     const remainingQueue = pendingQueue.slice(nextBatch.length);
+    const syncedAt = syncResponse?.syncedAt ?? nowIso;
+    const cachedSnapshot = await getItem<CatalogSnapshot>(CATALOG_SNAPSHOT_KEY);
+    const normalizedCachedSnapshot = cachedSnapshot ? parseCatalogSnapshot(cachedSnapshot) : null;
+    const nextSnapshot = normalizedCachedSnapshot
+      ? applyInventorySyncUpdatesToSnapshot(
+          normalizedCachedSnapshot,
+          nextBatch.map((item) => ({
+            beerId: item.beerId,
+            availableUnits: item.availableUnits,
+          })),
+          syncedAt
+        )
+      : null;
     await Promise.all([
       saveItem(CATALOG_SYNC_QUEUE_KEY, remainingQueue),
       saveCatalogSyncMetadata({
         lastAttemptAt: nowIso,
-        lastSuccessAt: nowIso,
+        lastSuccessAt: syncedAt,
         lastError: null,
         lastErrorCode: null,
       }),
+      ...(nextSnapshot ? [saveItem(CATALOG_SNAPSHOT_KEY, nextSnapshot)] : []),
     ]);
 
     const result: InventorySyncFlushResult = {

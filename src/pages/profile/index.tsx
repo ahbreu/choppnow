@@ -298,7 +298,8 @@ export default function Profile({
                     style={style.input}
                   />
                   <Text style={style.helperText}>
-                    Ao publicar, o produto entra no catalogo persistido local e ja nasce com estoque operacional.
+                    Ao publicar, o produto tenta persistir no backend do catalogo e cai para modo local se a API
+                    estiver indisponivel.
                   </Text>
                   <TouchableOpacity style={style.actionButton} onPress={handlePublishProduct}>
                     <Text style={style.actionButtonText}>Publicar produto</Text>

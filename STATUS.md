@@ -16,7 +16,7 @@ Para o escopo da primeira release real, veja `MVP.md`.
 O ChoppNow ja esta modelado como um app com dois lados:
 
 - comprador, que descobre cervejarias, navega pelo catalogo, monta carrinho, faz checkout e acompanha pedidos
-- parceiro/vendedor, que visualiza fila operacional, muda disponibilidade da loja, acompanha pedidos da cervejaria e publica novos produtos localmente
+- parceiro/vendedor, que visualiza fila operacional, muda disponibilidade da loja, acompanha pedidos da cervejaria e publica novos produtos com persistencia remota quando a API esta disponivel
 
 Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma vertical slice funcional do produto.
 
@@ -56,6 +56,8 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - cancelar pedidos em estados permitidos
 - publicar produto novo em overlay persistido do catalogo
 - ajustar estoque operacional por produto a partir do perfil
+- publicacao remota de produto do seller quando o backend do catalogo esta configurado
+- escrita de estoque refletida no snapshot cacheado apos sync remoto bem-sucedido
 
 ### Catalogo e resiliencia de dados
 
@@ -65,7 +67,7 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 - fallback final para seed
 - normalizacao de payload remoto
 - contrato versionado de discovery
-- fila local de sincronizacao de inventario
+- fila local de sincronizacao de inventario com tentativa de flush remoto
 - overlay persistido para produtos locais do parceiro
 - runtime de inventario separado do catalogo visivel ao comprador
 - metadados e logs locais de sincronizacao
@@ -93,8 +95,9 @@ Nao e mais um prototipo de login + landing. Hoje o repositorio ja representa uma
 ### Operacao do parceiro
 
 - disponibilidade da loja, pedidos e notificacoes ja persistem localmente
-- produtos novos e ajustes de estoque agora persistem localmente no runtime do catalogo
-- produtos locais ainda nao persistem em backend nem participam de um sync remoto real
+- produtos novos agora tentam persistir no backend do catalogo quando configurado
+- ajustes de estoque continuam operando localmente, mas agora atualizam o snapshot cacheado quando o sync remoto confirma sucesso
+- disponibilidade da loja e fila operacional ainda nao persistem em backend
 
 ### Qualidade e manutencao
 
@@ -151,10 +154,6 @@ O bloqueio principal nao e apenas "tokens do Codex". Os limites reais sao:
 ## Proxima abordagem recomendada
 
 1. Considerar `MVP.md` como escopo congelado e `BACKEND_CONTRACTS.md` como fonte de verdade dos endpoints do MVP.
-2. Entrar na Etapa 8 trocando os fluxos criticos locais por persistencia remota:
-   - catalogo
-   - estoque
-   - pedidos
-   - sessao
+2. Com catalogo e estoque ja conectados em modo remoto-first, entrar na proxima etapa trocando pedidos e sessao por persistencia remota.
 3. Manter `npm run validate` como gate minimo a cada corte.
 4. Seguir em entregas pequenas, sempre fechando documento + validacao + commit.

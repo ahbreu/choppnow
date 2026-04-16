@@ -397,9 +397,10 @@ export default function App() {
     try {
       const createdProduct = await publishCatalogProduct(currentUser.sellerStoreId, draft);
       await refreshCatalogRuntime();
+      const publishTarget = createdProduct.isLocalOnly ? "catalogo local de contingencia" : "backend do catalogo";
       Alert.alert(
         "Produto publicado",
-        `${createdProduct.name} entrou no catalogo com ${createdProduct.currentAvailableUnits} unidades.`
+        `${createdProduct.name} entrou no ${publishTarget} com ${createdProduct.currentAvailableUnits} unidades.`
       );
     } catch {
       Alert.alert("Falha no catalogo", "Nao foi possivel publicar o produto nesta sessao.");
